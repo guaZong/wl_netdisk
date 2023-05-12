@@ -1,0 +1,119 @@
+server:
+  servlet:
+    context-path: /netDisk
+  port: 1314
+  ip: 120.27.194.228
+
+spring:
+  datasource:
+    username: root
+    url: jdbc:mysql://120.27.194.228:3306/sk_netdisk?useSSL=false&useUnicode=true&characterEncoding=utf8
+    password: 'Lishoujia991121.'
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    type: com.alibaba.druid.pool.DruidDataSource
+
+
+  druid:
+    stat-view-servlet:
+      enabled: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 1000MB
+      enabled: true
+  mvc:
+    static-path-pattern: /**
+    view:
+      prefix: classpath:/static/
+      suffix: .html
+  redis:
+    #redis服务器地址
+    host: 120.27.194.228
+    #redis服务器端口
+    port: 6379
+    #redis数据库索引(默认为0)
+    database: 0
+    #连接超时时间(毫秒)
+    timeout: 1800000
+    jedis:
+      pool:
+        #连接池最大连接数量
+        max-active: 100
+        #最大阻塞等待时间(负数表示没有限制)
+        max-wait: -1
+        #连接池中最小的空闲连接
+        min-idle: 0
+        #连接池中的最大空闲连接
+        max-idle: 5
+        #redis的密码
+    password: Lishoujia3301
+  mail:
+    host: smtp.qq.com
+    username: 2038605485@qq.com
+    password: yvruiywcfzwgbfaa
+    default-encoding: UTF-8
+    port: 465
+    properties:
+      mail:
+        smtp:
+          ssl:
+            enable: true
+          auth: true
+          socketFactory:
+            port: 465
+            fallback: false
+            class: javax.net.ssl.SSLSocketFactory
+          starttls:
+            enable: true
+            required: true
+  rabbitmq:
+    host: 120.27.194.228
+    port: 5672
+    username: root
+    password: root
+    virtual-host: /
+    publisher-returns: true
+    #simple：每个发布操作的结果会立即返回一个确认或拒绝的响应。这是默认值。
+    #correlated：发布操作的确认和拒绝响应与每个消息相关联。这需要启用RabbitMQ的basic.ack和basic.nack消息。
+    #none：禁用发布操作的确认和拒绝响应。
+    #这三个选项中，simple是默认的选项。你可以通过将publisher-confirm-type参数设置为correlated启用相关确认，或将其设置为none禁用确认。
+    #替代了旧版本的 publisher-confirm
+    publisher-confirm-type: correlated
+    #设置交换机处理失败消息的模式,发送失败交换机会将消息返回给生产者,生产者通过监听可以拿到消息,
+    #这里我在config里面配置了,所以这里有没有都可以
+    template:
+      mandatory: true
+
+
+
+
+mybatis:
+  mapper-locations: classpath:Mapper/*.xml
+  type-aliases-package: com.scientific.Pojo
+  configuration:
+    # 开启驼峰uName自动映射到u_name
+    map-underscore-to-camel-case: true
+
+file:
+  staticAccessPath: /Static/**
+
+mybatis-plus:
+  #  configuration:
+  #取消默认的驼峰映射下划线
+  #    map-underscore-to-camel-case: false
+  global-config:
+    db-config:
+      logic-delete-field: is_delete
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+      id-type: auto #id生成规则：数据库id自增,这样生成的id不是又长又乱
+aliyun:
+  url: "https://img.lovelsj.com/"
+  endpoint: "oss-cn-hangzhou.aliyuncs.com"
+  accessKeyId: "LTAI5t7vaYEspUPivWGw5sDP"
+  accessKeySecret: "oFvCMY5KbbZriEWxg83ZG5iluZlVMy"
+  bucketName: "lovelsj"
+  signName: "未来网盘"
+  templateCode: "SMS_460615029"
+
+uploadFolder: "sj"
