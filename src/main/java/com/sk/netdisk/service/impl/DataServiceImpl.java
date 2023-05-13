@@ -475,7 +475,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         if (name.length() > maxNameLength) {
             throw new AppException(AppExceptionCodeMsg.DATA_NAME_TOO_LONG);
         }
-        String judgeReName = judgeReName(name, data.getParentDataId(), data.getType(), userId);
+        String judgeReName = judgeReName(name, data.getParentDataId(), data.getType(), userId,dataId);
         dataMapper.update(new Data(), new UpdateWrapper<Data>()
                 .set("name", judgeReName)
                 .eq("id", dataId));
@@ -882,6 +882,43 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                     .eq("create_by", userId));
             for (Data data : dataList) {
                 if (data.getName().equals(name)) {
+                    String str = name.split("\\.")[0];
+                    String last = name.split("\\.")[1];
+                    stringBuilder.append(str).append("_").append(RandomUtil.randomNumbers(8)).append(".").append(last);
+                    return stringBuilder.toString();
+                }
+            }
+        }
+        return name;
+    }
+
+    /**
+     * 判断是否重名并返回修改后的名字
+     *
+     * @param name         名字
+     * @param parentDataId 父文件id
+     * @return String
+     */
+    private String judgeReName(String name, Integer parentDataId, Integer type, Integer userId, Integer dataId) {
+        StringBuilder stringBuilder = new StringBuilder();
+        if (type == 0) {
+            List<Data> dataList = this.list(new QueryWrapper<Data>()
+                    .eq("parent_data_id", parentDataId)
+                    .eq("type", DataEnum.FOLDER.getIndex())
+                    .eq("create_by", userId));
+            for (Data data : dataList) {
+                if (data.getName().equals(name) && !data.getId().equals(dataId)) {
+                    stringBuilder.append(name).append("_").append(RandomUtil.randomNumbers(8));
+                    return stringBuilder.toString();
+                }
+            }
+        } else {
+            List<Data> dataList = this.list(new QueryWrapper<Data>()
+                    .eq("parent_data_id", parentDataId)
+                    .ne("type", DataEnum.FOLDER.getIndex())
+                    .eq("create_by", userId));
+            for (Data data : dataList) {
+                if (data.getName().equals(name) && !data.getId().equals(dataId)) {
                     String str = name.split("\\.")[0];
                     String last = name.split("\\.")[1];
                     stringBuilder.append(str).append("_").append(RandomUtil.randomNumbers(8)).append(".").append(last);

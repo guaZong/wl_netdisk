@@ -1,6 +1,7 @@
 package com.sk.netdisk.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.sk.netdisk.controller.request.GeneralRequest;
 import com.sk.netdisk.enums.AppExceptionCodeMsg;
 import com.sk.netdisk.enums.DataEnum;
 import com.sk.netdisk.exception.AppException;
@@ -38,8 +39,8 @@ public class DataController {
     }
 
     @ApiOperation(value = "遍历文件")
-    @GetMapping("/infoData")
-    public ResponseResult infoData(Integer parentDataId) {
+    @GetMapping("/infoData/{parentDataId}")
+    public ResponseResult infoData(@PathVariable Integer parentDataId) {
         if (Objects.isNull(parentDataId)) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
@@ -50,7 +51,9 @@ public class DataController {
 
     @ApiOperation(value = "创建文件夹")
     @PostMapping("/createFolder")
-    public ResponseResult createFolder(Integer parentDataId, String folderName) {
+    public ResponseResult createFolder(@RequestBody Data data) {
+        Integer parentDataId=data.getParentDataId();
+        String folderName=data.getName();
         if (Objects.isNull(parentDataId)) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
@@ -79,8 +82,8 @@ public class DataController {
     }
 
     @ApiOperation(value = "获取文件详细信息")
-    @GetMapping("/getDataInfo")
-    public ResponseResult getDataInfo(Integer dataId) {
+    @GetMapping("/getDataInfo/{dataId}")
+    public ResponseResult getDataInfo(@PathVariable Integer dataId) {
         if (Objects.isNull(dataId)) {
             throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
         }
@@ -91,21 +94,22 @@ public class DataController {
 
     @ApiOperation(value = "修改文件名称")
     @PutMapping("/updateDataName")
-    public ResponseResult updateDataName(Integer dataId, String name) {
+    public ResponseResult updateDataName(@RequestBody Data data) {
+        Integer dataId=data.getId();
+        String name=data.getName();
         if (Objects.isNull(dataId)) {
             throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
         }
         if (StringUtils.isEmpty(name)) {
             throw new AppException(AppExceptionCodeMsg.NAME_IS_NULL);
         }
-        Data data = dataService.updateDataName(dataId, name);
-        return ResponseResult.success(data);
+        return ResponseResult.success(dataService.updateDataName(dataId, name));
     }
 
 
     @ApiOperation(value = "删除文件")
-    @DeleteMapping("/delData")
-    public ResponseResult delData(Integer dataId) {
+    @DeleteMapping("/delData/{dataId}")
+    public ResponseResult delData(@PathVariable Integer dataId) {
         if (Objects.isNull(dataId)) {
             throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
         }
@@ -121,15 +125,15 @@ public class DataController {
     }
 
     @ApiOperation(value = "返回目前文件的父文件夹id")
-    @GetMapping("/getParentDataId")
-    public ResponseResult getParentDataId(Integer nowDataId) {
+    @GetMapping("/getParentDataId/{nowDataId}")
+    public ResponseResult getParentDataId(@PathVariable Integer nowDataId) {
         Integer parentDataId = dataService.getParentDataId(nowDataId);
         return ResponseResult.success(parentDataId);
     }
 
     @ApiOperation(value = "返回文件目录")
-    @GetMapping("/getDataFolder")
-    public ResponseResult getDataFolder(Integer folderId) {
+    @GetMapping("/getDataFolder/{folderId}")
+    public ResponseResult getDataFolder(@PathVariable Integer folderId) {
         if (Objects.isNull(folderId)) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
@@ -139,8 +143,8 @@ public class DataController {
 
 
     @ApiOperation(value = "删除回收站文件--彻底删除")
-    @DeleteMapping("/finalDelData")
-    public ResponseResult finalDelData(Integer dataDelId, String code) {
+    @DeleteMapping("/finalDelData/{dataDelId}")
+    public ResponseResult finalDelData(@PathVariable Integer dataDelId, @RequestParam String code) {
         if (Objects.isNull(dataDelId)) {
             throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
         }
@@ -156,12 +160,14 @@ public class DataController {
 
     @ApiOperation(value = "复制文件到另一个文件夹--复制操作")
     @PostMapping("/copyToNewFolder")
-    public ResponseResult copyToNewFolder(@RequestParam("dataIds") Set<Integer> dataIds, Integer parentDataId) throws InterruptedException {
-        if (dataIds.isEmpty() || Objects.isNull(parentDataId)) {
+    public ResponseResult copyToNewFolder(@RequestBody GeneralRequest generalRequest) throws InterruptedException {
+        Set<Integer> dataIds=generalRequest.getIds();
+        Integer newDataId=generalRequest.getTargetFolderId();
+        if (dataIds.isEmpty() || Objects.isNull(newDataId)) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         List<Integer> ids = new ArrayList<>(dataIds);
-        List<List<Data>> dataList = dataService.copyToNewFolder(ids, parentDataId);
+        List<List<Data>> dataList = dataService.copyToNewFolder(ids, newDataId);
         if (dataList.get(0).isEmpty()) {
             return ResponseResult.success();
         }
@@ -170,7 +176,9 @@ public class DataController {
 
     @ApiOperation(value = "移动文件到另一个文件夹--剪切操作")
     @PostMapping("/shearToNewFolder")
-    public ResponseResult shearToNewFolder(@RequestParam("dataIds") Set<Integer> dataIds, Integer newDataId) throws InterruptedException {
+    public ResponseResult shearToNewFolder(@RequestBody GeneralRequest generalRequest) throws InterruptedException {
+        Set<Integer> dataIds=generalRequest.getIds();
+        Integer newDataId=generalRequest.getTargetFolderId();
         if (dataIds.isEmpty() || newDataId == null) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -184,7 +192,9 @@ public class DataController {
 
     @ApiOperation(value = "批量覆盖原有文件")
     @PostMapping("/batchOverrideFiles")
-    public ResponseResult batchOverrideFiles(@RequestParam("dataIds") Set<Integer> dataIds, Integer newDataId) throws InterruptedException {
+    public ResponseResult batchOverrideFiles(@RequestBody GeneralRequest generalRequest) throws InterruptedException {
+        Set<Integer> dataIds=generalRequest.getIds();
+        Integer newDataId=generalRequest.getTargetFolderId();
         if (dataIds.isEmpty() || newDataId == null) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -195,7 +205,9 @@ public class DataController {
 
     @ApiOperation(value = "批量生成副本")
     @PostMapping("/batchGenerateDuplicates")
-    public ResponseResult batchGenerateDuplicates(@RequestParam("dataIds") Set<Integer> dataIds, Integer newDataId) throws InterruptedException {
+    public ResponseResult batchGenerateDuplicates(@RequestBody GeneralRequest generalRequest) throws InterruptedException {
+        Set<Integer> dataIds=generalRequest.getIds();
+        Integer newDataId=generalRequest.getTargetFolderId();
         if (dataIds.isEmpty() || newDataId == null) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -206,7 +218,8 @@ public class DataController {
 
     @ApiOperation(value = "添加文件到快捷访问")
     @PostMapping("/addToQuickAccess")
-    public ResponseResult addToQuickAccess(@RequestParam("dataIds") Set<Integer> dataIds) {
+    public ResponseResult addToQuickAccess(@RequestBody GeneralRequest generalRequest) {
+        Set<Integer> dataIds=generalRequest.getIds();
         dataService.addToQuickAccess(dataIds);
         return ResponseResult.success();
     }
@@ -214,7 +227,9 @@ public class DataController {
 
     @ApiOperation(value = "将回收站文件还原")
     @PostMapping("/restoreData")
-    public ResponseResult restoreData(@RequestParam("dataDelIds") List<Integer> dataDelIds) {
+    public ResponseResult restoreData(@RequestBody GeneralRequest generalRequest) {
+        Set<Integer> ids = generalRequest.getIds();
+        List<Integer>  dataDelIds=new ArrayList<>(ids);
         if (dataDelIds.isEmpty()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -224,19 +239,22 @@ public class DataController {
 
     @ApiOperation(value = "批量删除文件")
     @DeleteMapping("/batchDelData")
-    public ResponseResult batchDelData(@RequestParam("dataIds") Set<Integer> dataIds) {
-        if (dataIds.isEmpty()) {
+    public ResponseResult batchDelData(@RequestBody GeneralRequest generalRequest) {
+        Set<Integer> dataDelIds = generalRequest.getIds();
+        if (dataDelIds.isEmpty()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
-        List<Integer> ids = new ArrayList<>(dataIds);
+        List<Integer> ids = new ArrayList<>(dataDelIds);
         dataService.batchDelData(ids);
         return ResponseResult.success();
     }
 
 
-    @ApiOperation(value = "批量删除文件")
+    @ApiOperation(value = "批量删除回收站文件")
     @DeleteMapping("/batchFinalDelData")
-    public ResponseResult batchFinalDelData(@RequestParam("dataDelIds") Set<Integer> dataDelIds, String code) {
+    public ResponseResult batchFinalDelData(@RequestBody GeneralRequest generalRequest) {
+        Set<Integer> dataDelIds = generalRequest.getIds();
+        String code= generalRequest.getCode();
         if (dataDelIds.isEmpty()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -259,8 +277,8 @@ public class DataController {
     }
 
     @ApiOperation(value = "获取路径")
-    @GetMapping("/getDataPath")
-    public ResponseResult getDataPath(Integer dataId) {
+    @GetMapping("/getDataPath/{dataId}")
+    public ResponseResult getDataPath(@PathVariable Integer dataId) {
         if(Objects.isNull(dataId)){
             throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
         }
