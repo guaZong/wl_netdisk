@@ -34,7 +34,6 @@ public class UserDetailServiceImpl implements UserDetailsService {
         }
         List<String> list = new ArrayList<>();
         list.add(user.getStatus() + "");
-        SecurityUser securityUser = new SecurityUser(user.getUserId(),username,user.getPassword(),list);
-        return securityUser;
+        return new SecurityUser(user.getUserId(),username,user.getPassword(),list);
     }
 }

@@ -1,6 +1,7 @@
 package com.sk.netdisk.controller;
 
 import cn.hutool.core.util.ObjectUtil;
+import com.sk.netdisk.controller.request.GeneralRequest;
 import com.sk.netdisk.enums.AppExceptionCodeMsg;
 import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.pojo.dto.UserInfoDto;
@@ -28,13 +29,9 @@ public class UserController {
 
     @ApiOperation(value = "用户设置密码")
     @PostMapping("/makePwd")
-    @ApiImplicitParams(
-            {
-                    @ApiImplicitParam(name = "newPassword", value = "密码",required = true),
-                    @ApiImplicitParam(name = "repeatPassword", value = "重新输入密码",required = true)
-            }
-    )
-    public ResponseResult makePwd(String newPassword,String repeatPassword) {
+    public ResponseResult makePwd(@RequestBody GeneralRequest generalRequest) {
+        String newPassword=generalRequest.getPassword();
+        String repeatPassword=generalRequest.getRePassword();
         if(StringUtils.isAnyBlank(newPassword,repeatPassword)){
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }
@@ -47,14 +44,9 @@ public class UserController {
 
     @ApiOperation(value = "绑定邮箱")
     @PostMapping("/bindEmail")
-    @ApiImplicitParams(
-            {
-                    @ApiImplicitParam(name = "code", value = "验证码",required = true),
-                    @ApiImplicitParam(name = "newPassword", value = "密码",required = true),
-                    @ApiImplicitParam(name = "repeatPassword", value = "重新填写",required = true)
-            }
-    )
-    public ResponseResult bindEmail(String code,String email) {
+    public ResponseResult bindEmail(@RequestBody GeneralRequest generalRequest) {
+        String email = generalRequest.getEmail();
+        String code = generalRequest.getCode();
         if(StringUtils.isAnyBlank(code,email)){
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }

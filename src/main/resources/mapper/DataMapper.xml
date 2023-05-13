@@ -100,10 +100,10 @@
     </update>
 
     <update id="batchRestoreData" parameterType="java.util.List">
-            UPDATE `data`
-            SET is_delete=0
-            WHERE parent_data_id = #{parentDataId}
-            and create_by = #{userId}
+        UPDATE `data`
+        SET is_delete=0
+        WHERE parent_data_id = #{parentDataId}
+          and create_by = #{userId}
     </update>
 
     <insert id="batchSaveData" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
@@ -115,4 +115,16 @@
             #{item.createBy},#{item.fileId})
         </foreach>
     </insert>
+
+    <delete id="finalDeleteData">
+        delete
+        from `data`
+        where id = #{dataId}
+    </delete>
+
+    <delete id="batchFinalDelData">
+        delete
+        from `data`
+        where parent_data_id = #{parentDataId}
+    </delete>
 </mapper>

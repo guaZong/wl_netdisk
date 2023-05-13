@@ -5,6 +5,9 @@ import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Collection;
 
+/**
+ * @author LSJ
+ */
 public class PhoneAuthenticationToken extends AbstractAuthenticationToken {
 
     private final Object principal;

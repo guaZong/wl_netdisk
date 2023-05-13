@@ -35,13 +35,13 @@ public class PhoneSuccessHandler implements AuthenticationSuccessHandler {
         hashMap.put("userId",admin.getUserId().toString());
         hashMap.put("role",admin.getPermissionValueList().get(0));
         String token=tokenManager.createToken(hashMap);
-        String refresh_token = tokenManager.createToken(hashMap);
+        String refreshToken = tokenManager.createToken(hashMap);
         // 存储token 和对象数据在redis中-过期值一天
         redisUtil.hmset(token,hashMap,60*60*24);
         // 返回token
         HashMap<String, String> result = new HashMap<>();
         result.put("token", token);
-        result.put("refresh_token",refresh_token);
+        result.put("refresh_token",refreshToken);
         log.info(admin.getUsername() + ":管理员手机登录成功   时间：" + LocalDateTime.now());
         ResponseResult.out(response,ResponseResult.success(result));
     }

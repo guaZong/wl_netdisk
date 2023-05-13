@@ -13,11 +13,19 @@ public class GeneralRequest {
 
     private Set<Integer> ids;
 
-    private Set<Integer> sIds;
+    private Set<Integer> sids;
 
     private String code;
 
     private Integer targetFolderId;
+
+    private String password;
+
+    private String rePassword;
+
+    private String email;
+
+    private String phoneNumber;
 
 
 

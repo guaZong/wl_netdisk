@@ -46,12 +46,12 @@ public class PhoneCodeAuthenticationProvider implements AuthenticationProvider {
         String formMobile = request.getParameter(FORM_PHONE_KEY);
         String formSmsCode = request.getParameter(FORM_PHONE_CODE_KEY);
         // redis中保存的手机号和验证码
-        String RedisPhoneCode = String.valueOf(redisUtil.get(RedisConstants.PHONE_LOGIN_KEY+formMobile));
+        String redisPhoneCode = String.valueOf(redisUtil.get(RedisConstants.PHONE_LOGIN_KEY+formMobile));
         // 获取authentication参数的principal属性作为手机号
-        if (StringUtils.isEmpty(RedisPhoneCode)) {
+        if (StringUtils.isEmpty(redisPhoneCode)) {
             throw new BadCredentialsException("未发送手机验证码");
         }
-        if (!formSmsCode.equals(RedisPhoneCode)) {
+        if (!formSmsCode.equals(redisPhoneCode)) {
             throw new BadCredentialsException("验证码不一致");
         }
 

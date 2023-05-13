@@ -1,5 +1,6 @@
 package com.sk.netdisk.controller;
 
+import com.sk.netdisk.controller.request.GeneralRequest;
 import com.sk.netdisk.enums.AppExceptionCodeMsg;
 import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.service.DataService;
@@ -70,37 +71,27 @@ public class BaseController {
 
     @ApiOperation(value = "通过手机验证码找回密码")
     @PostMapping("/findPwd/pSetNewPwd")
-    @ApiImplicitParams(
-            {
-                    @ApiImplicitParam(name = "code", value = "验证码",required = true),
-                    @ApiImplicitParam(name = "newPassword", value = "密码",required = true),
-                    @ApiImplicitParam(name = "repeatPassword", value = "重新填写",required = true),
-                    @ApiImplicitParam(name = "phoneNumber", value = "手机号",required = true)
-            }
-    )
-    public ResponseResult pSetNewPwd(String phoneNumber,String code,String newPassword,String repeatPassword) {
-        if(StringUtils.isAnyBlank(newPassword,repeatPassword,phoneNumber,code)){
+    public ResponseResult pSetNewPwd(@RequestBody GeneralRequest generalRequest) {
+        String phoneNumber = generalRequest.getPhoneNumber();
+        String password = generalRequest.getPassword();
+        String rePassword = generalRequest.getRePassword();
+        String code = generalRequest.getCode();
+        if(StringUtils.isAnyBlank(password,rePassword,phoneNumber,code)){
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }
         if(!RegexUtils.isPhoneInvalid(phoneNumber)){
             throw new AppException(AppExceptionCodeMsg.PHONE_FORMAT_INVALID);
         }
-        if(!newPassword.equals(repeatPassword)){
+        if(!password.equals(rePassword)){
             throw new AppException(AppExceptionCodeMsg.RE_PASSWORD_INVALID);
         }
-        return userService.pSetNewPwd(phoneNumber,code,newPassword,repeatPassword);
+        return userService.pSetNewPwd(phoneNumber,code,password,rePassword);
     }
 
 
-    @ApiOperation(value = "通过手机验证码找回密码")
+    @ApiOperation(value = "发送删除回收站的验证码")
     @GetMapping("/sendFinalDelCode")
-    @ApiImplicitParams(
-            {
-                    @ApiImplicitParam(name = "phoneNumber", value = "手机号",required = true)
-            }
-    )
-    public ResponseResult senFinalDelCode(String phoneNumber) {
-
+    public ResponseResult sendFinalDelCode(String phoneNumber) {
         if(StringUtils.isAnyBlank(phoneNumber)){
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }

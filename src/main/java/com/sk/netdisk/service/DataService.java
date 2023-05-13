@@ -68,6 +68,7 @@ public interface DataService extends IService<Data> {
 
     /**
      * 获取文件路径
+     *
      * @param dataId 当前文件id
      * @return List<DataPathDto>
      */
@@ -167,16 +168,18 @@ public interface DataService extends IService<Data> {
      *
      * @param ids       将要进行覆盖的文件id
      * @param newDataId 某个文件夹id下进行
+     * @param sourceIds 将要被覆盖的id
      * @throws InterruptedException InterruptedException
+     *
      */
-    void batchOverrideFiles(List<Integer> ids, Integer newDataId) throws InterruptedException;
+    void batchOverrideFiles(List<Integer> ids, Integer newDataId, List<Integer> sourceIds) throws InterruptedException;
 
     /**
      * 批量生成副本
      *
      * @param ids       将要进行生成副本的文件id
      * @param newDataId 某个文件夹id下进行
-     * @throws  InterruptedException InterruptedException
+     * @throws InterruptedException InterruptedException
      */
     void batchGenerateDuplicates(List<Integer> ids, Integer newDataId) throws InterruptedException;
 
@@ -185,7 +188,7 @@ public interface DataService extends IService<Data> {
      *
      * @param dataIds 文件id集合
      */
-    void addToQuickAccess(Set<Integer> dataIds);
+    void addToQuickAccess(List<Integer>  dataIds);
 
     /**
      * 还原回收站的文件

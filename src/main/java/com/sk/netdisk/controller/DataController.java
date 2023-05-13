@@ -193,13 +193,15 @@ public class DataController {
     @ApiOperation(value = "批量覆盖原有文件")
     @PostMapping("/batchOverrideFiles")
     public ResponseResult batchOverrideFiles(@RequestBody GeneralRequest generalRequest) throws InterruptedException {
+        Set<Integer> sourceDataIds=generalRequest.getSids();
         Set<Integer> dataIds=generalRequest.getIds();
         Integer newDataId=generalRequest.getTargetFolderId();
-        if (dataIds.isEmpty() || newDataId == null) {
+        if (dataIds.isEmpty() || newDataId == null || sourceDataIds.isEmpty() || dataIds.size()!=sourceDataIds.size()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         List<Integer> ids = new ArrayList<>(dataIds);
-        dataService.batchOverrideFiles(ids, newDataId);
+        List<Integer> sourceIds=new ArrayList<>(sourceDataIds);
+        dataService.batchOverrideFiles(ids, newDataId,sourceIds);
         return ResponseResult.success();
     }
 
@@ -219,7 +221,11 @@ public class DataController {
     @ApiOperation(value = "添加文件到快捷访问")
     @PostMapping("/addToQuickAccess")
     public ResponseResult addToQuickAccess(@RequestBody GeneralRequest generalRequest) {
-        Set<Integer> dataIds=generalRequest.getIds();
+        Set<Integer> ids=generalRequest.getIds();
+        if(ids.isEmpty()){
+            throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
+        }
+        List<Integer> dataIds=new ArrayList<>(ids);
         dataService.addToQuickAccess(dataIds);
         return ResponseResult.success();
     }

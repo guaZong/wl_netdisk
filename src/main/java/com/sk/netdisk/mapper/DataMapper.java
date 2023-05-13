@@ -99,6 +99,20 @@ public interface DataMapper extends BaseMapper<Data> {
      * @param dataList 文件集合
      */
     void batchSaveData(List<Data> dataList);
+
+    /**
+     * 直接删除文件
+     * @param dataId
+     * @return
+     */
+    Integer finalDeleteData(Integer dataId);
+
+    /**
+     * 彻底批量删除父文件id是 parentDataId的所有文件
+     * @param parentDataId 父文件id
+     * @return
+     */
+    Integer batchFinalDelData(Integer parentDataId);
 }
 
 

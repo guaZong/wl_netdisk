@@ -21,6 +21,6 @@
         id,link,pass_code,
         access_num,access_status,create_time,
         update_time,create_by,update_by,
-        is_delete
+        is_delete,expire_days,data_id
     </sql>
 </mapper>

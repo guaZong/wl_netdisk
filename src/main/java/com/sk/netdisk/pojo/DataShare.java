@@ -7,10 +7,9 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 
  * @TableName data_share
  */
-@TableName(value ="data_share")
+@TableName(value = "data_share")
 @Data
 public class DataShare implements Serializable {
     /**
@@ -35,17 +34,17 @@ public class DataShare implements Serializable {
     private Integer accessNum;
 
     /**
-     * 允许查看人数状态(0是有人数限制,1是无人数限制)
+     * 允许查看人数状态(0是有人数限制,1是无人数限制,2是过期,3是被人删除)
      */
     private Integer accessStatus;
 
     /**
-     * 
+     *
      */
     private Date createTime;
 
     /**
-     * 
+     *
      */
     private Date updateTime;
 
@@ -55,7 +54,7 @@ public class DataShare implements Serializable {
     private Integer createBy;
 
     /**
-     * 
+     *
      */
     private Integer updateBy;
 
@@ -64,6 +63,12 @@ public class DataShare implements Serializable {
      */
     @TableLogic
     private Integer isDelete;
+    /**
+     * 文件id
+     */
+    private Integer dataId;
+
+    private Integer expireDays;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

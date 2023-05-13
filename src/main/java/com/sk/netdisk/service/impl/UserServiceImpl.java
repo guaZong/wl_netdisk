@@ -77,9 +77,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     @Override
     public void makePwd(String newPassword, String repeatPassword) {
         Integer userId = UserUtil.getLoginUserId();
-        if (!StringUtils.isAnyBlank(userMapper.selectById(userId).getPassword())) {
-            throw new AppException(AppExceptionCodeMsg.BUSY);
-        }
         userMapper.update(new User()
                 , new UpdateWrapper<User>().set("password"
                         , passwordEncoder.encode(newPassword)).eq("user_id", userId));

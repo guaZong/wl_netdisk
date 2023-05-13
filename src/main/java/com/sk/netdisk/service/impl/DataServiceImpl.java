@@ -302,7 +302,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
 
     @Override
-    @Transactional
     public void delData(Integer dataId) {
         Integer userId = UserUtil.getLoginUserId();
         Data data = this.getById(dataId);
@@ -315,13 +314,10 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         this.removeById(dataId);
         recurCountDelete(dataId);
         dataDelService.insertDataDel(dataId, userId);
-
     }
-
 
     /**
      * 递归删除文件
-     *
      * @param dataId 文件id
      */
     private void recurCountDelete(Integer dataId) {
@@ -475,7 +471,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         if (name.length() > maxNameLength) {
             throw new AppException(AppExceptionCodeMsg.DATA_NAME_TOO_LONG);
         }
-        String judgeReName = judgeReName(name, data.getParentDataId(), data.getType(), userId,dataId);
+        String judgeReName = judgeReName(name, data.getParentDataId(), data.getType(), userId, dataId);
         dataMapper.update(new Data(), new UpdateWrapper<Data>()
                 .set("name", judgeReName)
                 .eq("id", dataId));
@@ -507,7 +503,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         List<Data> targetDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
                 .eq("parent_data_id", targetFolderDataId)
                 .eq("create_by", userId));
-
         for (int copyDataId : dataIds) {
             Data copyData = dataMapper.selectOne(new QueryWrapper<Data>()
                     .eq("id", copyDataId)
@@ -573,7 +568,8 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 copyDataSubData.setParentDataId(copedId);
             }
             dataMapper.batchSaveData(copyDataSubDataList);
-            List<Data> getSaveList = this.list(new QueryWrapper<Data>().eq("parent_data_id", copedId));
+            List<Data> getSaveList = this.list(new QueryWrapper<Data>()
+                    .eq("parent_data_id", copedId));
             List<Data> sourceCopyDataList = dataMapper.selectList(new QueryWrapper<Data>()
                     .eq("parent_data_id", copyData.getId())
                     .eq("create_by", userId));
@@ -663,8 +659,50 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     @Override
     @Transactional
-    public void batchOverrideFiles(List<Integer> dataIds, Integer targetFolderDataId) throws InterruptedException {
+    public void batchOverrideFiles(List<Integer> dataIds, Integer targetFolderDataId, List<Integer> sourceDataIds) throws InterruptedException {
+        Integer userId = UserUtil.getLoginUserId();
+        CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
+        for (int dataId : sourceDataIds) {
+            nowServiceThreadPool.execute(() -> {
+                try {
+                    Data data = this.getById(dataId);
+                    if (Objects.isNull(data) || !data.getCreateBy().equals(userId)) {
+                        countDownLatch.countDown();
+                        return;
+                    }
+                    dataMapper.finalDeleteData(dataId);
+                    recurCountFinalDelete(dataId);
+                } finally {
+                    countDownLatch.countDown();
+                }
+            });
+        }
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        copyToNewFolder(dataIds, targetFolderDataId);
 
+    }
+
+    /**
+     * 递归直接删除文件
+     *
+     * @param dataId 文件id
+     */
+    private void recurCountFinalDelete(Integer dataId) {
+        List<Data> dataList = this.list(new QueryWrapper<Data>().eq("parent_data_id", dataId));
+        dataMapper.batchFinalDelData(dataId);
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        for (Data data : dataList) {
+            if (data.getType() == DataEnum.FOLDER.getIndex()) {
+                CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(
+                        () -> recurCountFinalDelete(data.getId()));
+                futures.add(voidCompletableFuture);
+            }
+        }
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
 
@@ -715,7 +753,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     }
 
     @Override
-    public void addToQuickAccess(Set<Integer> dataIds) {
+    public void addToQuickAccess(List<Integer> dataIds) {
 
     }
 
