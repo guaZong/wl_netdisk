@@ -176,8 +176,9 @@ public interface DataService extends IService<Data> {
      *
      * @param ids       将要进行生成副本的文件id
      * @param newDataId 某个文件夹id下进行
+     * @throws  InterruptedException InterruptedException
      */
-    void batchGenerateDuplicates(List<Integer> ids, Integer newDataId);
+    void batchGenerateDuplicates(List<Integer> ids, Integer newDataId) throws InterruptedException;
 
     /**
      * 添加文件到快捷访问

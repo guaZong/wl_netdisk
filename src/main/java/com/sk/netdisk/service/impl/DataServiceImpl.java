@@ -37,6 +37,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -311,14 +312,12 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         if (!data.getCreateBy().equals(userId)) {
             throw new AppException(AppExceptionCodeMsg.INVALID_PERMISSION);
         }
-        deleteData(dataId, userId);
-    }
-
-    private void deleteData(Integer dataId, Integer userId) {
         this.removeById(dataId);
         recurCountDelete(dataId);
         dataDelService.insertDataDel(dataId, userId);
+
     }
+
 
     /**
      * 递归删除文件
@@ -343,20 +342,22 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     @Override
     public void batchDelData(List<Integer> dataIds) {
         Integer userId = UserUtil.getLoginUserId();
-        CountDownLatch countDownLatch=new CountDownLatch(dataIds.size());
+        CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
         for (int dataId : dataIds) {
-            try {
-                nowServiceThreadPool.execute(()->{
+            nowServiceThreadPool.execute(() -> {
+                try {
                     Data data = this.getById(dataId);
                     if (Objects.isNull(data) || !data.getCreateBy().equals(userId)) {
                         countDownLatch.countDown();
                         return;
                     }
-                    deleteData(dataId, userId);
-                });
-            } finally {
-                countDownLatch.countDown();
-            }
+                    this.removeById(dataId);
+                    recurCountDelete(dataId);
+                    dataDelService.insertDataDel(dataId, userId);
+                } finally {
+                    countDownLatch.countDown();
+                }
+            });
         }
         try {
             countDownLatch.await();
@@ -406,7 +407,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
      * @param data 文件
      */
     private void recurCountFinalDelete(Data data) {
-
         if (data.getType() != DataEnum.FOLDER.getIndex()) {
             File file = fileMapper.selectById(data.getFileId());
             if (!Objects.isNull(file)) {
@@ -662,26 +662,48 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     }
 
     @Override
+    @Transactional
     public void batchOverrideFiles(List<Integer> dataIds, Integer targetFolderDataId) throws InterruptedException {
+
+    }
+
+
+    @Override
+    public void batchGenerateDuplicates(List<Integer> dataIds, Integer targetFolderDataId) throws InterruptedException {
+        List<String> nameList = this.list(new QueryWrapper<Data>().eq("parent_data_id", targetFolderDataId)).stream()
+                .map(Data::getName).collect(Collectors.toList());
         Integer userId = UserUtil.getLoginUserId();
-        if (targetFolderDataId != DataEnum.MAX_NONE_FOLDER.getIndex()) {
-            Data fatherData = dataMapper.findByCreateByAndId(targetFolderDataId, userId);
-            if (Objects.isNull(fatherData) || fatherData.getType() != DataEnum.FOLDER.getIndex()) {
-                throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
-            }
-        }
         if (dataIds.size() == Integer.MAX_VALUE) {
             throw new AppException(AppExceptionCodeMsg.DATA_NUM_TOO_LARGE);
         }
+        Data targetFolder = dataMapper.selectOne(new QueryWrapper<Data>()
+                .eq("id", targetFolderDataId)
+                .eq("create_by", userId));
+        //判断目标文件夹是否存在,判断完之后targetFolder必须是文件夹类型
+        if ((targetFolderDataId != DataEnum.MAX_NONE_FOLDER.getIndex() && Objects.isNull(targetFolder))
+                || (!Objects.isNull(targetFolder) && targetFolder.getType() != DataEnum.FOLDER.getIndex())) {
+            throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
+        }
         CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
-        for (int overrideDataId : dataIds) {
-            Data copyData = this.getById(overrideDataId);
+        for (int copyDataId : dataIds) {
+            Data copyData = dataMapper.selectOne(new QueryWrapper<Data>()
+                    .eq("id", copyDataId)
+                    .eq("create_by", userId));
             if (Objects.isNull(copyData)) {
+                countDownLatch.countDown();
                 continue;
             }
+            //判断复制的时候是不是复制复制到原来的文件夹或错误的复制
+            if (copyData.getParentDataId().equals(targetFolderDataId) || copyDataId == targetFolderDataId) {
+                throw new AppException(AppExceptionCodeMsg.DATA_COPY_ERR);
+            }
+            copyData.setName(renameFile(copyData.getName(), nameList));
             nowServiceThreadPool.execute(() -> {
                 try {
-//                    recurToCopy(overrideDataId, targetFolderDataId, userId);
+                    Data newData = new Data(copyData.getName(), copyData.getType(), targetFolderDataId,
+                            copyData.getCreateTime(), copyData.getUpdateTime(), userId, copyData.getFileId());
+                    this.save(newData);
+                    recurToCopy(copyData, userId, newData.getId());
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {
@@ -692,19 +714,12 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         countDownLatch.await();
     }
 
-
-    @Override
-    public void batchGenerateDuplicates(List<Integer> ids, Integer newDataId) {
-
-    }
-
     @Override
     public void addToQuickAccess(Set<Integer> dataIds) {
 
     }
 
     @Override
-    @Transactional
     public void restoreData(List<Integer> dataDelIds) {
         Integer userId = UserUtil.getLoginUserId();
         for (Integer dataDelId : dataDelIds) {
@@ -724,14 +739,15 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
      * @param dataId Integer 文件id
      * @param userId Integer 用户id
      */
-    private void recurToRestoreData(Integer dataId, Integer userId) {
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void recurToRestoreData(Integer dataId, Integer userId) {
         List<Data> deleteDataList = dataMapper.findDeleteListByCreateByAndParentId(dataId, userId);
         dataMapper.batchRestoreData(dataId, userId);
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         for (Data deleteData : deleteDataList) {
             if (deleteData.getType() == 0) {
                 CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(
-                        () ->  recurToRestoreData(deleteData.getId(), userId));
+                        () -> recurToRestoreData(deleteData.getId(), userId));
                 futures.add(voidCompletableFuture);
             }
         }
@@ -751,7 +767,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             if (data.getType() == DataEnum.FOLDER.getIndex()) {
                 recurInfo.folderNum++;
                 CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(
-                        () ->  recurCountSize(data.getId(), recurInfo));
+                        () -> recurCountSize(data.getId(), recurInfo));
                 futures.add(voidCompletableFuture);
             } else {
                 Integer fileId = this.getById(data.getId()).getFileId();
@@ -874,6 +890,27 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             }
         }
         return name;
+    }
+
+    public String renameFile(String fileName, List<String> existingNames) {
+        Set<String> existingSet = new HashSet<>(existingNames);
+        String newFileName = fileName;
+        int counter = 1;
+
+        while (existingSet.contains(newFileName)) {
+            int dotIndex = fileName.lastIndexOf(".");
+            String baseName = (dotIndex != -1) ? fileName.substring(0, dotIndex) : fileName;
+            String extension = (dotIndex != -1) ? fileName.substring(dotIndex) : "";
+
+            String candidateName = baseName + "(" + counter + ")" + extension;
+            if (existingSet.contains(candidateName)) {
+                counter++;
+            } else {
+                newFileName = candidateName;
+            }
+        }
+
+        return newFileName;
     }
 
 
