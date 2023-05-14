@@ -1,16 +1,22 @@
 package com.sk.netdisk.pojo;
 
 import com.baomidou.mybatisplus.annotation.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.Date;
+import java.util.List;
+import java.util.Set;
 
 /**
  * @TableName data_share
  */
 @TableName(value = "data_share")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class DataShare implements Serializable {
     /**
      * 分享表id
@@ -63,13 +69,36 @@ public class DataShare implements Serializable {
      */
     @TableLogic
     private Integer isDelete;
+
     /**
      * 文件id
      */
-    private Integer dataId;
+    private Set<Integer> dataIds;
 
     private Integer expireDays;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
+
+
+    public DataShare(String link, String passCode, Integer accessNum, Integer accessStatus,
+                     Date createTime, Integer createBy, Integer expireDays) {
+        this.link = link;
+        this.passCode = passCode;
+        this.accessNum = accessNum;
+        this.accessStatus = accessStatus;
+        this.createTime = createTime;
+        this.createBy = createBy;
+        this.expireDays = expireDays;
+    }
+
+    public DataShare(String link, String passCode, Integer accessStatus,
+                     Date createTime, Integer createBy, Integer expireDays) {
+        this.link = link;
+        this.passCode = passCode;
+        this.accessStatus = accessStatus;
+        this.createTime = createTime;
+        this.createBy = createBy;
+        this.expireDays = expireDays;
+    }
 }

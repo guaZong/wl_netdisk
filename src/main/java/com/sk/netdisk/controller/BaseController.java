@@ -114,4 +114,17 @@ public class BaseController {
 
 
 
+    @ApiOperation(value = "遍历某个被分享的文件")
+    @GetMapping("/{link}}")
+    public void sendFinalDelCode1(@PathVariable String link) {
+//        if(StringUtils.isEmpty(link)){
+//            throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
+//        }
+//        if(!RegexUtils.isPhoneInvalid(phoneNumber)){
+//            throw new AppException(AppExceptionCodeMsg.PHONE_FORMAT_INVALID);
+//        }
+//        String code = userService.senFinalDelCode(phoneNumber);
+//        return ResponseResult.success(code);
+    }
+
 }

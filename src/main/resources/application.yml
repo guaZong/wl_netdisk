@@ -117,3 +117,4 @@ aliyun:
   templateCode: "SMS_460615029"
 
 uploadFolder: "sj"
+domainName: "http://netdisk.lovelsj.com/"

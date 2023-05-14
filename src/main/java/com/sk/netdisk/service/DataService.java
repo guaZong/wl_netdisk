@@ -4,13 +4,13 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.pojo.dto.DataPathDto;
+import com.sk.netdisk.pojo.dto.ShareInfoDto;
 import com.sk.netdisk.pojo.vo.DataDelInfoVo;
 import com.sk.netdisk.pojo.vo.DataInfoVo;
 import com.sun.istack.Nullable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
-import java.util.Set;
 
 
 /**
@@ -149,9 +149,8 @@ public interface DataService extends IService<Data> {
      * @param dataIds            要复制的文件id
      * @param targetFolderDataId 复制到的文件夹id
      * @return List<List < Data>> 返回重名的集合和已经存在的集合
-     * @throws InterruptedException InterruptedException
      */
-    List<List<Data>> copyToNewFolder(List<Integer> dataIds, Integer targetFolderDataId) throws InterruptedException;
+    List<List<Data>> copyToNewFolder(List<Integer> dataIds, Integer targetFolderDataId);
 
     /**
      * 移动文件到另一个文件夹--剪切操作
@@ -196,6 +195,8 @@ public interface DataService extends IService<Data> {
      * @param dataDelIds List<Integer>回收站文件id集合
      */
     void restoreData(List<Integer> dataDelIds);
+
+
 
 
 }

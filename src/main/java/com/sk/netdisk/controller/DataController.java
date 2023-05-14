@@ -52,8 +52,8 @@ public class DataController {
     @ApiOperation(value = "创建文件夹")
     @PostMapping("/createFolder")
     public ResponseResult createFolder(@RequestBody Data data) {
-        Integer parentDataId=data.getParentDataId();
-        String folderName=data.getName();
+        Integer parentDataId = data.getParentDataId();
+        String folderName = data.getName();
         if (Objects.isNull(parentDataId)) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
@@ -95,8 +95,8 @@ public class DataController {
     @ApiOperation(value = "修改文件名称")
     @PutMapping("/updateDataName")
     public ResponseResult updateDataName(@RequestBody Data data) {
-        Integer dataId=data.getId();
-        String name=data.getName();
+        Integer dataId = data.getId();
+        String name = data.getName();
         if (Objects.isNull(dataId)) {
             throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
         }
@@ -160,9 +160,9 @@ public class DataController {
 
     @ApiOperation(value = "复制文件到另一个文件夹--复制操作")
     @PostMapping("/copyToNewFolder")
-    public ResponseResult copyToNewFolder(@RequestBody GeneralRequest generalRequest) throws InterruptedException {
-        Set<Integer> dataIds=generalRequest.getIds();
-        Integer newDataId=generalRequest.getTargetFolderId();
+    public ResponseResult copyToNewFolder(@RequestBody GeneralRequest generalRequest) {
+        Set<Integer> dataIds = generalRequest.getIds();
+        Integer newDataId = generalRequest.getTargetFolderId();
         if (dataIds.isEmpty() || Objects.isNull(newDataId)) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -177,8 +177,8 @@ public class DataController {
     @ApiOperation(value = "移动文件到另一个文件夹--剪切操作")
     @PostMapping("/shearToNewFolder")
     public ResponseResult shearToNewFolder(@RequestBody GeneralRequest generalRequest) throws InterruptedException {
-        Set<Integer> dataIds=generalRequest.getIds();
-        Integer newDataId=generalRequest.getTargetFolderId();
+        Set<Integer> dataIds = generalRequest.getIds();
+        Integer newDataId = generalRequest.getTargetFolderId();
         if (dataIds.isEmpty() || newDataId == null) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -193,23 +193,23 @@ public class DataController {
     @ApiOperation(value = "批量覆盖原有文件")
     @PostMapping("/batchOverrideFiles")
     public ResponseResult batchOverrideFiles(@RequestBody GeneralRequest generalRequest) throws InterruptedException {
-        Set<Integer> sourceDataIds=generalRequest.getSids();
-        Set<Integer> dataIds=generalRequest.getIds();
-        Integer newDataId=generalRequest.getTargetFolderId();
-        if (dataIds.isEmpty() || newDataId == null || sourceDataIds.isEmpty() || dataIds.size()!=sourceDataIds.size()) {
+        Set<Integer> sourceDataIds = generalRequest.getSids();
+        Set<Integer> dataIds = generalRequest.getIds();
+        Integer newDataId = generalRequest.getTargetFolderId();
+        if (dataIds.isEmpty() || newDataId == null || sourceDataIds.isEmpty() || dataIds.size() != sourceDataIds.size()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         List<Integer> ids = new ArrayList<>(dataIds);
-        List<Integer> sourceIds=new ArrayList<>(sourceDataIds);
-        dataService.batchOverrideFiles(ids, newDataId,sourceIds);
+        List<Integer> sourceIds = new ArrayList<>(sourceDataIds);
+        dataService.batchOverrideFiles(ids, newDataId, sourceIds);
         return ResponseResult.success();
     }
 
     @ApiOperation(value = "批量生成副本")
     @PostMapping("/batchGenerateDuplicates")
     public ResponseResult batchGenerateDuplicates(@RequestBody GeneralRequest generalRequest) throws InterruptedException {
-        Set<Integer> dataIds=generalRequest.getIds();
-        Integer newDataId=generalRequest.getTargetFolderId();
+        Set<Integer> dataIds = generalRequest.getIds();
+        Integer newDataId = generalRequest.getTargetFolderId();
         if (dataIds.isEmpty() || newDataId == null) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -221,11 +221,11 @@ public class DataController {
     @ApiOperation(value = "添加文件到快捷访问")
     @PostMapping("/addToQuickAccess")
     public ResponseResult addToQuickAccess(@RequestBody GeneralRequest generalRequest) {
-        Set<Integer> ids=generalRequest.getIds();
-        if(ids.isEmpty()){
+        Set<Integer> ids = generalRequest.getIds();
+        if (ids.isEmpty()) {
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }
-        List<Integer> dataIds=new ArrayList<>(ids);
+        List<Integer> dataIds = new ArrayList<>(ids);
         dataService.addToQuickAccess(dataIds);
         return ResponseResult.success();
     }
@@ -235,7 +235,7 @@ public class DataController {
     @PostMapping("/restoreData")
     public ResponseResult restoreData(@RequestBody GeneralRequest generalRequest) {
         Set<Integer> ids = generalRequest.getIds();
-        List<Integer>  dataDelIds=new ArrayList<>(ids);
+        List<Integer> dataDelIds = new ArrayList<>(ids);
         if (dataDelIds.isEmpty()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -260,7 +260,7 @@ public class DataController {
     @DeleteMapping("/batchFinalDelData")
     public ResponseResult batchFinalDelData(@RequestBody GeneralRequest generalRequest) {
         Set<Integer> dataDelIds = generalRequest.getIds();
-        String code= generalRequest.getCode();
+        String code = generalRequest.getCode();
         if (dataDelIds.isEmpty()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -278,14 +278,14 @@ public class DataController {
     @ApiOperation(value = "遍历快捷访问")
     @GetMapping("/traverseQuickAccess")
     public ResponseResult traverseQuickAccess() {
-       List<Data> dataList= dataService.traverseQuickAccess();
+        List<Data> dataList = dataService.traverseQuickAccess();
         return ResponseResult.success();
     }
 
     @ApiOperation(value = "获取路径")
     @GetMapping("/getDataPath/{dataId}")
     public ResponseResult getDataPath(@PathVariable Integer dataId) {
-        if(Objects.isNull(dataId)){
+        if (Objects.isNull(dataId)) {
             throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
         }
         List<DataPathDto> dataPath = dataService.getDataPath(dataId);

@@ -41,7 +41,11 @@ public class RedisConstants {
     /**
      * 真实文件 redis key
      */
-    public static final String FILE_KEY = "netdisk:"+"file:";
+    public static final String FILE_KEY = "netdisk:file:";
+    /**
+     * 分享文件 redis key
+     */
+    public static final String SHARE_KEY="netdisk:share:";
 
 
 

@@ -1,7 +1,9 @@
 package com.sk.netdisk.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.DataShare;
+import com.sk.netdisk.pojo.dto.ShareInfoDto;
 
 import java.util.List;
 
@@ -15,21 +17,41 @@ public interface DataShareService extends IService<DataShare> {
 
     /**
      * 分享文件
-     * @param dataId 文件id
+     * @param dataId 文件id集合
      * @param passCode 文件提取码
      * @param accessNum 文件访问人数
      * @param accessStatus 访问权限
-     * @return
+     * @param expireDays 过期天数
+     * @return DataShare
      */
-   Integer createShareFile(Integer dataId,String passCode,Integer accessNum,Integer accessStatus);
+   DataShare createShareFile(List<Integer> dataId,String passCode,Integer accessNum,Integer accessStatus,Integer expireDays);
 
     /**
      * 取消分享
-     * @param shareId
-     * @return
+     * @param shareId shareId
+     * @param userId userId
      */
-   Integer cancelShare(Integer shareId);
+    void cancelShare(Integer shareId,Integer userId);
 
+    /**
+     * 批量取消分享文件
+     * @param shareIds shareIds
+     */
+    void batchCancelShare(List<Integer> shareIds);
 
+    /**
+     * 遍历我的分享
+     * @return List<ShareInfoDto>
+     */
+    List<ShareInfoDto>  traverseShares();
 
+    /**
+     * 将文件保存到我的资源
+     * @param dataIds 文件id集合
+     * @param shareId 分享id
+     * @param targetFolderId 目标文件夹id
+     * @param code 保存所需要的文件提取码
+     * @return List<List<Data>>
+     */
+    List<List<Data>> saveToMyResource(List<Integer> dataIds, Integer shareId, Integer targetFolderId, String code);
 }

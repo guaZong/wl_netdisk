@@ -38,6 +38,8 @@ public enum AppExceptionCodeMsg {
     DATA_SHEAR_ERR(12007,"不能将文件移动到自身或其子目录下"),
     DATA_NUM_TOO_LARGE(12008,"文件数目过多"),
     DATA_RENAME(12009,"文件重名"),
+    PASSCODE_INVALID(12010,"提取码错误"),
+    SHARE_INVALID(12011,"分享已取消"),
     ;
 
 

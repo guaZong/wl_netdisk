@@ -27,6 +27,8 @@ public class GeneralRequest {
 
     private String phoneNumber;
 
+    private Integer shareId;
+
 
 
 }

@@ -21,6 +21,7 @@ import com.sk.netdisk.pojo.DataDel;
 import com.sk.netdisk.pojo.File;
 import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.pojo.dto.DataPathDto;
+import com.sk.netdisk.pojo.dto.ShareInfoDto;
 import com.sk.netdisk.pojo.vo.DataDelInfoVo;
 import com.sk.netdisk.pojo.vo.DataInfoVo;
 import com.sk.netdisk.service.DataDelService;
@@ -318,6 +319,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     /**
      * 递归删除文件
+     *
      * @param dataId 文件id
      */
     private void recurCountDelete(Integer dataId) {
@@ -344,7 +346,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 try {
                     Data data = this.getById(dataId);
                     if (Objects.isNull(data) || !data.getCreateBy().equals(userId)) {
-                        countDownLatch.countDown();
+                        //在try  ...catch ...finally里面return的话,会先执行finally中的代码,所以这里不需要进行countDownLatch.countdown()
                         return;
                     }
                     this.removeById(dataId);
@@ -356,7 +358,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             });
         }
         try {
-            countDownLatch.await();
+            boolean await = countDownLatch.await(1, TimeUnit.MINUTES);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -481,38 +483,40 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     @Override
     @Transactional
-    public List<List<Data>> copyToNewFolder(List<Integer> dataIds, Integer targetFolderDataId) throws InterruptedException {
+    public List<List<Data>> copyToNewFolder(List<Integer> dataIds, Integer targetFolderDataId) {
         Integer userId = UserUtil.getLoginUserId();
         if (dataIds.size() == Integer.MAX_VALUE) {
             throw new AppException(AppExceptionCodeMsg.DATA_NUM_TOO_LARGE);
         }
         Data targetFolder = dataMapper.selectOne(new QueryWrapper<Data>()
-                .eq("id", targetFolderDataId)
-                .eq("create_by", userId));
+                .eq("id", targetFolderDataId).eq("create_by",userId));
         //判断目标文件夹是否存在,判断完之后targetFolder必须是文件夹类型
         if ((targetFolderDataId != DataEnum.MAX_NONE_FOLDER.getIndex() && Objects.isNull(targetFolder))
                 || (!Objects.isNull(targetFolder) && targetFolder.getType() != DataEnum.FOLDER.getIndex())) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
-        List<List<Data>> result = new ArrayList<>();
         CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
+        //定义返回结果集
+        List<List<Data>> result = new ArrayList<>();
         //重名的文件
         List<Data> reNameList = new CopyOnWriteArrayList<>();
-        //原来的文件
+        //重名的原文件
         List<Data> sourceList = new CopyOnWriteArrayList<>();
+        //查找目标文件下所有子文件,用于查重名
         List<Data> targetDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
-                .eq("parent_data_id", targetFolderDataId)
-                .eq("create_by", userId));
+                .eq("parent_data_id", targetFolderDataId).eq("create_by",userId));
+        //开始复制操作
         for (int copyDataId : dataIds) {
             Data copyData = dataMapper.selectOne(new QueryWrapper<Data>()
-                    .eq("id", copyDataId)
-                    .eq("create_by", userId));
+                    .eq("id", copyDataId));
             if (Objects.isNull(copyData)) {
                 countDownLatch.countDown();
                 continue;
             }
             //判断复制的时候是不是复制复制到原来的文件夹或错误的复制
-            if (copyData.getParentDataId().equals(targetFolderDataId) || copyDataId == targetFolderDataId) {
+            if (targetFolderDataId!=0 && (copyData.getParentDataId().equals(targetFolderDataId)
+                    && copyData.getCreateBy().equals(targetFolder.getCreateBy()))
+                    || copyDataId == targetFolderDataId) {
                 throw new AppException(AppExceptionCodeMsg.DATA_COPY_ERR);
             }
             nowServiceThreadPool.execute(() -> {
@@ -530,7 +534,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                     }
                     if (!shouldContinue) {
                         Data newData = new Data(copyData.getName(), copyData.getType(), targetFolderDataId,
-                                copyData.getCreateTime(), copyData.getUpdateTime(), userId, copyData.getFileId());
+                                new Date(), new Date(), userId, copyData.getFileId());
                         this.save(newData);
                         recurToCopy(copyData, userId, newData.getId());
                     }
@@ -541,7 +545,11 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 }
             });
         }
-        countDownLatch.await();
+        try {
+            countDownLatch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
         result.add(reNameList);
         result.add(sourceList);
         return result;
@@ -559,20 +567,19 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         if (copyData.getType() == DataEnum.FOLDER.getIndex()) {
             //查找要复制的文件夹所有的子文件
             List<Data> copyDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
-                    .eq("parent_data_id", copyData.getId())
-                    .eq("create_by", userId));
+                    .eq("parent_data_id", copyData.getId()));
             if (copyDataSubDataList.isEmpty()) {
                 return;
             }
             for (Data copyDataSubData : copyDataSubDataList) {
                 copyDataSubData.setParentDataId(copedId);
+                copyDataSubData.setCreateBy(userId);
             }
             dataMapper.batchSaveData(copyDataSubDataList);
             List<Data> getSaveList = this.list(new QueryWrapper<Data>()
                     .eq("parent_data_id", copedId));
             List<Data> sourceCopyDataList = dataMapper.selectList(new QueryWrapper<Data>()
-                    .eq("parent_data_id", copyData.getId())
-                    .eq("create_by", userId));
+                    .eq("parent_data_id", copyData.getId()));
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (int i = 0; i < getSaveList.size(); i++) {
                 int copyDataIndex = i;
@@ -667,7 +674,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 try {
                     Data data = this.getById(dataId);
                     if (Objects.isNull(data) || !data.getCreateBy().equals(userId)) {
-                        countDownLatch.countDown();
                         return;
                     }
                     dataMapper.finalDeleteData(dataId);
@@ -770,6 +776,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             dataDelService.removeById(dataDel.getId());
         }
     }
+
 
     /**
      * 递归还原被删除文件

@@ -19,11 +19,6 @@ public class FileServiceImpl extends ServiceImpl<FileMapper, File>
     implements FileService{
 
 
-    public static void main(String[] args) {
-        System.out.println(RandomUtil.randomString("_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789-",25));
-
-    }
-
 }
 
 
