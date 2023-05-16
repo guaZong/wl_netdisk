@@ -88,4 +88,10 @@ public interface UserService extends IService<User> {
      * @return 存储空间
      */
     String getStorage();
+
+    /**
+     * 遍历自己登录后的用户信息
+     * @return UserInfoDto
+     */
+    UserInfoDto infoUser();
 }

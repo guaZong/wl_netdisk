@@ -97,4 +97,11 @@ public class UserController {
         String getStorage = userService.getStorage();
         return ResponseResult.success(getStorage);
     }
+
+    @ApiOperation(value = "获取登录后信息")
+    @GetMapping("/infoUser")
+    public ResponseResult infoUser() {
+        UserInfoDto infoUser = userService.infoUser();
+        return ResponseResult.success(infoUser);
+    }
 }

@@ -189,6 +189,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         }
     }
 
+    @Override
+    public UserInfoDto infoUser() {
+        Integer userId=UserUtil.getLoginUserId();
+        return userMapper.findUserById(userId);
+    }
+
     private void getUseSize(Integer userId, RecurCountSizeInfo recurCountSizeInfo) {
         List<Data> dataList = dataMapper.selectList(new QueryWrapper<Data>()
                 .eq("parent_data_id", DataEnum.MAX_NONE_FOLDER).eq("create_by", userId));

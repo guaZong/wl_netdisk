@@ -14,7 +14,11 @@ import org.apache.ibatis.annotations.Mapper;
 */
 @Mapper
 public interface UserMapper extends BaseMapper<User> {
-
+    /**
+     * 遍历用户信息
+     * @param userId userId
+     * @return UserInfoDto
+     */
     UserInfoDto findUserById(Integer userId);
 }
 
