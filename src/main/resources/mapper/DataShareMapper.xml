@@ -39,8 +39,18 @@
     </select>
 
     <select id="selectById" resultType="com.sk.netdisk.pojo.DataShare">
-        select *
-        from data_share
+        select ds.id,
+               ds.link,
+               ds.pass_code,
+               ds.access_num,
+               ds.access_status,
+               ds.create_time,
+               ds.update_time,
+               ds.update_time,
+               ds.create_by,
+               ds.is_delete,
+               ds.expire_days
+        from data_share ds
         where id = #{shareId}
           and is_delete = 0
     </select>

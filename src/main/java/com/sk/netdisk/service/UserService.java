@@ -6,6 +6,8 @@ import com.sk.netdisk.pojo.dto.UserInfoDto;
 import com.sk.netdisk.util.ResponseResult;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 
 /**
 * @author lsj
@@ -80,4 +82,10 @@ public interface UserService extends IService<User> {
      * @return String
      */
     String senFinalDelCode(String phoneNumber);
+
+    /**
+     * 获取用户使用的存储空间
+     * @return 存储空间
+     */
+    String getStorage();
 }

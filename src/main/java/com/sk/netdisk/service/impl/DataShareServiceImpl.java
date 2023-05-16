@@ -4,6 +4,7 @@ import java.util.*;
 
 import cn.hutool.core.thread.NamedThreadFactory;
 import cn.hutool.core.util.RandomUtil;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.sk.netdisk.constant.RedisConstants;
@@ -73,7 +74,8 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
     }
 
     @Override
-    public DataShare createShareFile(List<Integer> dataIds, String passCode, Integer accessNum, Integer accessStatus, Integer expireDays) {
+    public DataShare createShareFile(List<Integer> dataIds,String passCode,
+                                     Integer accessNum, Integer accessStatus, Integer expireDays) {
         Integer userId = UserUtil.getLoginUserId();
         List<Data> dataList = dataMapper.selectBatchIds(dataIds);
         List<Share> shareList = new ArrayList<>();
@@ -93,9 +95,14 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         String link = RandomUtil.randomString(randomKey, 25);
         DataShare dataShare;
         if (accessStatus == DataEnum.SHARE_IS_LIMIT.getIndex()) {
-            dataShare = new DataShare(link, passCode, accessNum, DataEnum.SHARE_IS_LIMIT.getIndex(), new Date(), userId, expireDays);
+            if (Objects.isNull(accessNum) || accessNum == 0) {
+                throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
+            }
+            dataShare = new DataShare(link, passCode, accessNum, DataEnum.SHARE_IS_LIMIT.getIndex(),
+                    new Date(), userId, expireDays);
         } else if (accessStatus == DataEnum.SHARE_NO_LIMIT.getIndex()) {
-            dataShare = new DataShare(link, passCode, DataEnum.SHARE_NO_LIMIT.getIndex(), new Date(), userId, expireDays);
+            dataShare = new DataShare(link, passCode, DataEnum.SHARE_NO_LIMIT.getIndex(),
+                    new Date(), userId, expireDays);
         } else {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -211,12 +218,31 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
             }
         }
         List<List<Data>> result = dataService.copyToNewFolder(dataIds, targetFolderId);
-        if(result.get(0).isEmpty()){
+        if (result.get(0).isEmpty()) {
             //保存人数+1
             redisUtil.hincr(redisKey, "saveNum", 1);
         }
         //保存操作
         return result;
+    }
+
+    @Override
+    public List<Integer> getShareData(String uuid,String passCode) {
+        DataShare dataShare = this.getOne(new QueryWrapper<DataShare>().eq("link", uuid));
+        if(Objects.isNull(dataShare) || dataShare.getAccessStatus()==DataEnum.SHARE_IS_EXPIRE.getIndex()){
+            throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
+        }
+        if(dataShare.getAccessStatus()==DataEnum.SHARE_IS_DELETE.getIndex()){
+            throw new AppException(AppExceptionCodeMsg.SHARE_IS_DELETE);
+        }
+        if(!StringUtils.isEmpty(dataShare.getPassCode()) && !dataShare.getPassCode().equals(passCode)){
+            throw new AppException(AppExceptionCodeMsg.PASSCODE_INVALID);
+        }
+        List<Integer> dataIds = shareMapper.selectIdsByShareId(dataShare.getId());
+        if(dataIds.isEmpty()){
+            throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
+        }
+        return dataIds;
     }
 
     /**

@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 /**
  * 用户API
  * @author Administrator
@@ -87,5 +89,12 @@ public class UserController {
         }
         UserInfoDto userInfoDto = userService.updateNickname(nickname);
         return ResponseResult.success(userInfoDto);
+    }
+
+    @ApiOperation(value = "获取某用户存储空间")
+    @GetMapping("/getStorage")
+    public ResponseResult getStorage() {
+        String getStorage = userService.getStorage();
+        return ResponseResult.success(getStorage);
     }
 }

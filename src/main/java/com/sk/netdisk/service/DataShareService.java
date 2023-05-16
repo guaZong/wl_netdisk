@@ -54,4 +54,12 @@ public interface DataShareService extends IService<DataShare> {
      * @return List<List<Data>>
      */
     List<List<Data>> saveToMyResource(List<Integer> dataIds, Integer shareId, Integer targetFolderId, String code);
+
+    /**
+     * 通过链接中的uuid获取分享文件
+     * @param uuid uuid
+     * @param passCode passCode
+     * @return List<Integer>
+     */
+    List<Integer> getShareData(String uuid,String passCode);
 }

@@ -3,7 +3,9 @@ package com.sk.netdisk.controller;
 import com.sk.netdisk.controller.request.GeneralRequest;
 import com.sk.netdisk.enums.AppExceptionCodeMsg;
 import com.sk.netdisk.exception.AppException;
+import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.service.DataService;
+import com.sk.netdisk.service.DataShareService;
 import com.sk.netdisk.service.UserService;
 import com.sk.netdisk.service.impl.DataServiceImpl;
 import com.sk.netdisk.util.Redis.RedisIdWorker;
@@ -14,8 +16,10 @@ import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
 import io.swagger.annotations.ApiOperation;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Objects;
 
 
 /**
@@ -27,22 +31,25 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/sysVisitor")
 public class BaseController {
 
-    UserService userService;
+    private final UserService userService;
 
-    RedisUtil redisUtil;
+    private final RedisUtil redisUtil;
 
-    RedisIdWorker redisIdWorker;
+    private final RedisIdWorker redisIdWorker;
 
-    DataService dataService;
-    @Autowired
-    DataServiceImpl dataService1;
+    private final DataService dataService;
+
+    DataServiceImpl dataServiceImpl;
+
+    private final DataShareService dataShareService;
 
     public BaseController(UserService userService, RedisUtil redisUtil,
-                          RedisIdWorker redisIdWorker, DataService dataService) {
+                          RedisIdWorker redisIdWorker, DataService dataService, DataShareService dataShareService) {
         this.userService = userService;
         this.redisUtil = redisUtil;
         this.redisIdWorker = redisIdWorker;
         this.dataService = dataService;
+        this.dataShareService = dataShareService;
     }
 
 
@@ -115,16 +122,26 @@ public class BaseController {
 
 
     @ApiOperation(value = "遍历某个被分享的文件")
-    @GetMapping("/{link}}")
-    public void sendFinalDelCode1(@PathVariable String link) {
-//        if(StringUtils.isEmpty(link)){
-//            throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
-//        }
-//        if(!RegexUtils.isPhoneInvalid(phoneNumber)){
-//            throw new AppException(AppExceptionCodeMsg.PHONE_FORMAT_INVALID);
-//        }
-//        String code = userService.senFinalDelCode(phoneNumber);
-//        return ResponseResult.success(code);
+    @GetMapping("/getShareData")
+    public ResponseResult getShareData(@RequestBody GeneralRequest generalRequest) {
+        String passCode = generalRequest.getPassCode();
+        String uuid = generalRequest.getLink();
+        if(StringUtils.isEmpty(uuid)){
+            throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
+        }
+        List<Integer> dataIds = dataShareService.getShareData(uuid,passCode);
+        return ResponseResult.success(dataIds);
+    }
+
+
+    @ApiOperation(value = "遍历文件")
+    @GetMapping("/infoData/{parentDataId}")
+    public ResponseResult infoData(@PathVariable Integer parentDataId) {
+        if (Objects.isNull(parentDataId)) {
+            throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
+        }
+        List<DataDetInfoDto> dataList = dataService.infoData(parentDataId);
+        return ResponseResult.success(dataList);
     }
 
 }

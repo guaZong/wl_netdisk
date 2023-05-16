@@ -1,17 +1,23 @@
 package com.sk.netdisk.service.impl;
 
+import cn.hutool.core.thread.NamedThreadFactory;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.sk.netdisk.enums.AppExceptionCodeMsg;
+import com.sk.netdisk.enums.DataEnum;
 import com.sk.netdisk.enums.FilePathEnum;
 import com.sk.netdisk.exception.AppException;
+import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.UserMapper;
+import com.sk.netdisk.pojo.Data;
+import com.sk.netdisk.pojo.File;
 import com.sk.netdisk.pojo.User;
 import com.sk.netdisk.pojo.dto.UserInfoDto;
 import com.sk.netdisk.pojo.vo.RabbitCodeVO;
+import com.sk.netdisk.pojo.vo.RecurCountSizeInfo;
 import com.sk.netdisk.service.UserService;
 import com.sk.netdisk.constant.RedisConstants;
 import com.sk.netdisk.util.Redis.RedisUtil;
@@ -21,14 +27,16 @@ import com.sk.netdisk.util.UserUtil;
 import com.sk.netdisk.constant.RabbitmqConstants;
 import com.sk.netdisk.util.upload.OSSUtil;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.*;
 
 
 /**
@@ -52,16 +60,27 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     private final OSSUtil ossUtil;
 
+    private final DataServiceImpl dataService;
+
+    private final DataMapper dataMapper;
+
+    private final ExecutorService nowServiceThreadPool;
+
     @Autowired
     public UserServiceImpl(PasswordEncoder passwordEncoder, RedisUtil redisUtil,
-                           UserMapper userMapper, RabbitTemplate rabbitTemplate, OSSUtil ossUtil) {
+                           UserMapper userMapper, RabbitTemplate rabbitTemplate,
+                           OSSUtil ossUtil, DataServiceImpl dataService, DataMapper dataMapper) {
+        this.dataService = dataService;
+        this.dataMapper = dataMapper;
+        ThreadFactory namedThreadFactory = new NamedThreadFactory("UserfServiceImpl", false);
+        nowServiceThreadPool = new ThreadPoolExecutor(24, 24, 0,
+                TimeUnit.SECONDS, new LinkedBlockingDeque<>(), namedThreadFactory);
         this.passwordEncoder = passwordEncoder;
         this.redisUtil = redisUtil;
         this.userMapper = userMapper;
         this.rabbitTemplate = rabbitTemplate;
         this.ossUtil = ossUtil;
     }
-
 
 
     @Override
@@ -104,7 +123,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new AppException(AppExceptionCodeMsg.INVALID_CODE);
         }
         userMapper.update(new User(), new UpdateWrapper<User>().set("password"
-                        , passwordEncoder.encode(newPassword)).eq("user_id", userId));
+                , passwordEncoder.encode(newPassword)).eq("user_id", userId));
         return ResponseResult.success("修改成功");
     }
 
@@ -119,7 +138,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new AppException(AppExceptionCodeMsg.INVALID_CODE);
         }
         userMapper.update(new User(), new UpdateWrapper<User>().set("email"
-                        , email).eq("user_id", userId));
+                , email).eq("user_id", userId));
         return userMapper.findUserById(userId);
     }
 
@@ -137,7 +156,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         Integer userId = UserUtil.getLoginUserId();
         String avatarPath = ossUtil.upload(avatar, FilePathEnum.AVATAR.getPath());
         userMapper.update(new User(), new UpdateWrapper<User>().set("avatar"
-                        , avatarPath).eq("user_id", userId));
+                , avatarPath).eq("user_id", userId));
         return userMapper.findUserById(userId);
     }
 
@@ -145,15 +164,62 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public UserInfoDto updateNickname(String nickname) {
         Integer userId = UserUtil.getLoginUserId();
         userMapper.update(new User(), new UpdateWrapper<User>().set("nickname"
-                        , nickname).eq("user_id", userId));
+                , nickname).eq("user_id", userId));
         return userMapper.findUserById(userId);
     }
 
     @Override
     public String senFinalDelCode(String phoneNumber) {
-        return  checkAndSendCode(phoneNumber, RabbitmqConstants.CODE_EXCHANGE,
-                RabbitmqConstants.BIND_FINAL_DEL_KEY,RedisConstants.PHONE_FINAL_DEL_KEY);
+        return checkAndSendCode(phoneNumber, RabbitmqConstants.CODE_EXCHANGE,
+                RabbitmqConstants.BIND_FINAL_DEL_KEY, RedisConstants.PHONE_FINAL_DEL_KEY);
     }
+
+    @Override
+    public String getStorage() {
+        Integer userId = UserUtil.getLoginUserId();
+        Object storage = redisUtil.get(RedisConstants.USER_STORAGE + userId);
+        RecurCountSizeInfo recurCountSizeInfo = new RecurCountSizeInfo(0, 0, 0);
+        if (Objects.isNull(storage)) {
+            getUseSize(userId,recurCountSizeInfo);
+            String fileSize = dataService.getFileSize(recurCountSizeInfo.getDataSize());
+            redisUtil.set(RedisConstants.USER_STORAGE + userId, fileSize,60);
+            return fileSize;
+        }else{
+            return (String)storage;
+        }
+    }
+
+    private void getUseSize(Integer userId, RecurCountSizeInfo recurCountSizeInfo) {
+        List<Data> dataList = dataMapper.selectList(new QueryWrapper<Data>()
+                .eq("parent_data_id", DataEnum.MAX_NONE_FOLDER).eq("create_by", userId));
+        CountDownLatch countDownLatch = new CountDownLatch(dataList.size());
+        for (Data data : dataList) {
+            nowServiceThreadPool.submit(() -> {
+                try {
+                    dataService.recurCountSize(data.getId(), recurCountSizeInfo);
+                } finally {
+                    countDownLatch.countDown();
+                }
+            });
+        }
+        try {
+            countDownLatch.await(1,TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 更新用户的存储空间大小
+     * @param userId
+     */
+    public void reFreshSize(Integer userId){
+        RecurCountSizeInfo recurCountSizeInfo = new RecurCountSizeInfo(0, 0, 0);
+            getUseSize(userId,recurCountSizeInfo);
+            String fileSize = dataService.getFileSize(recurCountSizeInfo.getDataSize());
+            redisUtil.set(RedisConstants.USER_STORAGE + userId, fileSize,60);
+    }
+
 
     /**
      * 封装redis检查与rabbitmq异步发送信息的方法
@@ -179,7 +245,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             rabbitCodeVO.setCode((String) oldCode);
             //rabbitmq异步发送验证码
             rabbitTemplate.convertAndSend(exchange, routingKey, rabbitCodeVO);
-            return (String)oldCode;
+            return (String) oldCode;
         }
         //  保存验证码到redis-五分钟过期
         redisUtil.set(redisKey + account, code, 300);

@@ -47,6 +47,11 @@ public class RedisConstants {
      */
     public static final String SHARE_KEY="netdisk:share:";
 
+    /**
+     * 分享文件 redis key
+     */
+    public static final String USER_STORAGE ="storage:";
+
 
 
 }

@@ -28,7 +28,7 @@ public interface ShareMapper extends BaseMapper<Share> {
     void deleteByShareId(Integer shareId);
 
     /**
-     * 通过shareId查找存在多少id
+     * 通过shareId查找存在多少Dataid
      * @param shareId
      * @return
      */

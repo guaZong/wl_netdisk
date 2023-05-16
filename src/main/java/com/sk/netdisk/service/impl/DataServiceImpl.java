@@ -21,9 +21,9 @@ import com.sk.netdisk.pojo.DataDel;
 import com.sk.netdisk.pojo.File;
 import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.pojo.dto.DataPathDto;
-import com.sk.netdisk.pojo.dto.ShareInfoDto;
 import com.sk.netdisk.pojo.vo.DataDelInfoVo;
 import com.sk.netdisk.pojo.vo.DataInfoVo;
+import com.sk.netdisk.pojo.vo.RecurCountSizeInfo;
 import com.sk.netdisk.service.DataDelService;
 import com.sk.netdisk.service.DataService;
 import com.sk.netdisk.util.CommonUtils;
@@ -124,7 +124,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         }
         int folderNum = 0, fileNum = 0;
         long dataSize = 0;
-        RecurInfo recurInfo = new RecurInfo(folderNum, fileNum, dataSize);
+        RecurCountSizeInfo recurCountSizeInfo = new RecurCountSizeInfo(folderNum, fileNum, dataSize);
         Date date;
         if (Objects.isNull(data.getUpdateTime())) {
             date = data.getCreateTime();
@@ -132,14 +132,14 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             date = data.getUpdateTime();
         }
         String stringDate = CommonUtils.getStringDate(date);
-        recurCountSize(dataId, recurInfo);
+        recurCountSize(dataId, recurCountSizeInfo);
         StringBuilder nameBuilder = new StringBuilder();
         recurCountName(data.getParentDataId(), nameBuilder);
         DataInfoVo dataInfoVo;
         if (data.getType() == DataEnum.FOLDER.getIndex()) {
-            String fileSize = getFileSize(recurInfo.dataSize);
+            String fileSize = getFileSize(recurCountSizeInfo.getDataSize());
             dataInfoVo = new DataInfoVo("文件夹", "/" + nameBuilder.toString(), fileSize,
-                    recurInfo.folderNum, recurInfo.fileNum, stringDate);
+                    recurCountSizeInfo.getFolderNum(), recurCountSizeInfo.getFileNum(), stringDate);
         } else {
             String[] split = data.getName().split("\\.");
             String str = split[1] + "文件";
@@ -407,10 +407,11 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     private void recurCountFinalDelete(Data data) {
         if (data.getType() != DataEnum.FOLDER.getIndex()) {
             File file = fileMapper.selectById(data.getFileId());
+            System.out.println(file);
             if (!Objects.isNull(file)) {
                 redisUtil.hdecr(RedisConstants.FILE_KEY + file.getMd5(), "useNum", 1);
                 Object useNum = redisUtil.hget(RedisConstants.FILE_KEY + file.getMd5(), "useNum");
-                if ((int) useNum == 0) {
+                if ((int) useNum <=0) {
                     ossUtil.removeData(CommonUtils.getObjectName(file.getLink()));
                     redisUtil.del(RedisConstants.FILE_KEY + file.getMd5());
                     fileMapper.deleteById(data.getFileId());
@@ -433,16 +434,32 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 redisUtil.get(RedisConstants.PHONE_FINAL_DEL_KEY + userMapper.selectById(userId).getUsername()))) {
             throw new AppException(AppExceptionCodeMsg.INVALID_CODE);
         }
+        CountDownLatch countDownLatch = new CountDownLatch(dataDelIds.size());
         for (int dataDelId : dataDelIds) {
             nowServiceThreadPool.execute(() -> {
-                DataDel dataDel = dataDelService.getById(dataDelId);
-                if ((result != accessToFinalDelData && Objects.isNull(code))
-                        || (!Objects.isNull(dataDel) && !dataDel.getCreateBy().equals(userId))
-                        || Objects.isNull(dataDel)) {
-                    return;
+                try {
+                    DataDel dataDel = dataDelService.getById(dataDelId);
+                    if ((result != accessToFinalDelData && Objects.isNull(code))
+                            || (!Objects.isNull(dataDel) && !dataDel.getCreateBy().equals(userId))
+                            || Objects.isNull(dataDel)) {
+                        return;
+                    }
+                    redisUtil.set(RedisConstants.FINAL_DEL_KEY + userId, 1, 60 * 60 * 6);
+                    Data data = dataMapper.findById(dataDel.getDataId());
+                    dataMapper.finalDelData(dataDel.getDataId());
+                    recurCountFinalDelete(data);
+                    dataDelService.removeById(dataDelId);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                } finally {
+                    countDownLatch.countDown();
                 }
-                finalDeleteData(dataDelId, dataDel.getDataId(), userId);
             });
+        }
+        try {
+            countDownLatch.await(1, TimeUnit.MINUTES);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
@@ -489,7 +506,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             throw new AppException(AppExceptionCodeMsg.DATA_NUM_TOO_LARGE);
         }
         Data targetFolder = dataMapper.selectOne(new QueryWrapper<Data>()
-                .eq("id", targetFolderDataId).eq("create_by",userId));
+                .eq("id", targetFolderDataId).eq("create_by", userId));
         //判断目标文件夹是否存在,判断完之后targetFolder必须是文件夹类型
         if ((targetFolderDataId != DataEnum.MAX_NONE_FOLDER.getIndex() && Objects.isNull(targetFolder))
                 || (!Objects.isNull(targetFolder) && targetFolder.getType() != DataEnum.FOLDER.getIndex())) {
@@ -504,7 +521,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         List<Data> sourceList = new CopyOnWriteArrayList<>();
         //查找目标文件下所有子文件,用于查重名
         List<Data> targetDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
-                .eq("parent_data_id", targetFolderDataId).eq("create_by",userId));
+                .eq("parent_data_id", targetFolderDataId).eq("create_by", userId));
         //开始复制操作
         for (int copyDataId : dataIds) {
             Data copyData = dataMapper.selectOne(new QueryWrapper<Data>()
@@ -514,7 +531,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 continue;
             }
             //判断复制的时候是不是复制复制到原来的文件夹或错误的复制
-            if (targetFolderDataId!=0 && (copyData.getParentDataId().equals(targetFolderDataId)
+            if (targetFolderDataId != 0 && (copyData.getParentDataId().equals(targetFolderDataId)
                     && copyData.getCreateBy().equals(targetFolder.getCreateBy()))
                     || copyDataId == targetFolderDataId) {
                 throw new AppException(AppExceptionCodeMsg.DATA_COPY_ERR);
@@ -803,28 +820,30 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
      * 递归计算所有文件大小
      *
      * @param dataId    文件id
-     * @param recurInfo RecurInfo
+     * @param recurCountSizeInfo RecurCountSizeInfo
      */
-    private void recurCountSize(Integer dataId, RecurInfo recurInfo) {
+    public void recurCountSize(Integer dataId, RecurCountSizeInfo recurCountSizeInfo) {
         List<Data> dataList = this.list(new QueryWrapper<Data>().eq("parent_data_id", dataId));
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         for (Data data : dataList) {
             if (data.getType() == DataEnum.FOLDER.getIndex()) {
-                recurInfo.folderNum++;
+                recurCountSizeInfo.setFolderNum(recurCountSizeInfo.getFolderNum()+1);
                 CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(
-                        () -> recurCountSize(data.getId(), recurInfo));
+                        () -> recurCountSize(data.getId(), recurCountSizeInfo));
                 futures.add(voidCompletableFuture);
             } else {
                 Integer fileId = this.getById(data.getId()).getFileId();
                 File file = fileMapper.selectById(fileId);
                 if (!Objects.isNull(file)) {
-                    recurInfo.dataSize += Long.parseLong(file.getBytes());
+                    recurCountSizeInfo.setDataSize(recurCountSizeInfo.getDataSize()+Long.parseLong(file.getBytes()));
                 }
-                recurInfo.fileNum++;
+                recurCountSizeInfo.setFileNum(recurCountSizeInfo.getFileNum()+1);
             }
         }
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
+
+
 
     private Data createData(MultipartFile file, Integer parentDataId) {
         Integer userId = UserUtil.getLoginUserId();
@@ -995,15 +1014,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         return newFileName;
     }
 
-
-    @lombok.Data
-    @AllArgsConstructor
-
-    static class RecurInfo {
-        private Integer folderNum;
-        private Integer fileNum;
-        private long dataSize;
-    }
 
 
     @Override

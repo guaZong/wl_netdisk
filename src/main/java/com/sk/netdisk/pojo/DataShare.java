@@ -73,7 +73,9 @@ public class DataShare implements Serializable {
     /**
      * 文件id
      */
+    @TableField(exist = false)
     private Set<Integer> dataIds;
+
 
     private Integer expireDays;
 

@@ -2,17 +2,20 @@ package com.sk.netdisk.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.sk.netdisk.constant.RedisConstants;
 import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.UserMapper;
 import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.User;
 import com.sk.netdisk.pojo.security.SecurityPhone;
 import com.sk.netdisk.util.CommonUtils;
+import com.sk.netdisk.util.Redis.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -24,8 +27,11 @@ public class PhoneDetailServiceImpl implements UserDetailsService {
     UserMapper userMapper;
     @Autowired
     DataMapper dataMapper;
+    @Autowired
+    RedisUtil redisUtil;
 
     @Override
+    @Transactional
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         //验证码正确之后,根据手机号查询用户
         QueryWrapper<User> queryWrapper=new QueryWrapper<>();

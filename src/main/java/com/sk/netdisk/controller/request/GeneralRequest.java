@@ -29,6 +29,10 @@ public class GeneralRequest {
 
     private Integer shareId;
 
+    private String passCode;
+
+    private String link;
+
 
 
 }

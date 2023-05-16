@@ -1,6 +1,10 @@
 package com.sk.netdisk.config.security.phoneSecurityConfig;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sk.netdisk.constant.RedisConstants;
+import com.sk.netdisk.enums.AppExceptionCodeMsg;
+import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.util.Redis.RedisUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -14,6 +18,8 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.io.InputStream;
 
 @Component
 public class PhoneCodeAuthenticationProvider implements AuthenticationProvider {
@@ -41,17 +47,15 @@ public class PhoneCodeAuthenticationProvider implements AuthenticationProvider {
      * @param authentication
      */
     private void authenticationChecks(Authentication authentication) {
-        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
-        // 表单提交的手机号和验证码
-        String formMobile = request.getParameter(FORM_PHONE_KEY);
-        String formSmsCode = request.getParameter(FORM_PHONE_CODE_KEY);
+        Object username = authentication.getPrincipal();
+        Object code=authentication.getCredentials();
         // redis中保存的手机号和验证码
-        String redisPhoneCode = String.valueOf(redisUtil.get(RedisConstants.PHONE_LOGIN_KEY+formMobile));
+        String redisPhoneCode = String.valueOf(redisUtil.get(RedisConstants.PHONE_LOGIN_KEY+username));
         // 获取authentication参数的principal属性作为手机号
         if (StringUtils.isEmpty(redisPhoneCode)) {
             throw new BadCredentialsException("未发送手机验证码");
         }
-        if (!formSmsCode.equals(redisPhoneCode)) {
+        if (!username.equals(redisPhoneCode)) {
             throw new BadCredentialsException("验证码不一致");
         }
 
