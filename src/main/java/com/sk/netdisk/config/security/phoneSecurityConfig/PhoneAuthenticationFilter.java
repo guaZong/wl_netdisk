@@ -57,6 +57,8 @@ public class PhoneAuthenticationFilter extends AbstractAuthenticationProcessingF
             JsonNode jsonNode = objectMapper.readTree(inputStream);
             username = jsonNode.get("username").asText();
             code = jsonNode.get("code").asText();
+            System.out.println(username);
+            System.out.println(code);
         } catch (IOException e) {
             ResponseResult.out(response,ResponseResult.error(AppExceptionCodeMsg.BUSY));
         }
@@ -64,14 +66,6 @@ public class PhoneAuthenticationFilter extends AbstractAuthenticationProcessingF
         // Allow subclasses to set the "details" property
         setDetails(request, authRequest);
         return this.getAuthenticationManager().authenticate(authRequest);
-    }
-
-    private String obtainPhone(HttpServletRequest request) {
-        return request.getParameter(FORM_PHONE_KEY);
-    }
-
-    private String obtainPhoneCode(HttpServletRequest request) {
-        return request.getParameter(FORM_PHONE_CODE_KEY);
     }
 
     protected void setDetails(HttpServletRequest request, PhoneAuthenticationToken authRequest) {
