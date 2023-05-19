@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.util.Date;
 
 /**
- * 
+ * @author lsj
  * @TableName group
  */
 @TableName(value ="group")

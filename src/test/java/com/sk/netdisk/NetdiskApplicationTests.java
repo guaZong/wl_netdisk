@@ -152,16 +152,7 @@ class NetdiskApplicationTests {
     @Autowired
     DataMapper dataMapper;
 
-    @Test
-    public void test4(){
-        //1.测试过期时间,死信消息,模拟回收站文件发送给正常交换机
-        rabbitTemplate.convertAndSend("del_exchange","del.finalDelData",20154);
-    }
 
-    @Test
-    public void test5(){
-        System.out.println(dataMapper.findById(22998));
-    }
 
 
 

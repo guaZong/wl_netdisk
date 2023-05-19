@@ -75,6 +75,7 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
     }
 
     @Override
+    @Transactional
     public DataShare createShareFile(List<Integer> dataIds,String passCode,
                                      Integer accessNum, Integer accessStatus, Integer expireDays) {
         Integer userId = UserUtil.getLoginUserId();
@@ -93,16 +94,17 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         }
         passCode = StringUtils.isEmpty(passCode) ? "" : passCode;
         String randomKey = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789-";
-        String link = RandomUtil.randomString(randomKey, 25);
+        String uuid = RandomUtil.randomString(randomKey, 25);
+        String link=domainName+"sysShare/"+uuid;
         DataShare dataShare;
         if (accessStatus == DataEnum.SHARE_IS_LIMIT.getIndex()) {
             if (Objects.isNull(accessNum) || accessNum == 0) {
                 throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
             }
-            dataShare = new DataShare(link, passCode, accessNum, DataEnum.SHARE_IS_LIMIT.getIndex(),
+            dataShare = new DataShare(uuid, passCode, accessNum, DataEnum.SHARE_IS_LIMIT.getIndex(),
                     new Date(), userId, expireDays);
         } else if (accessStatus == DataEnum.SHARE_NO_LIMIT.getIndex()) {
-            dataShare = new DataShare(link, passCode, DataEnum.SHARE_NO_LIMIT.getIndex(),
+            dataShare = new DataShare(uuid, passCode, DataEnum.SHARE_NO_LIMIT.getIndex(),
                     new Date(), userId, expireDays);
         } else {
             throw new AppException(AppExceptionCodeMsg.BUSY);
@@ -110,6 +112,9 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         this.save(dataShare);
         for (Share share : shareList) {
             share.setShareId(dataShare.getId());
+        }
+        if(shareList.isEmpty()){
+           throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         shareMapper.batchSaveShare(shareList);
         nowServiceThreadPool.execute(() -> {
@@ -119,6 +124,7 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
             }
         });
         dataShare.setDataIds(new HashSet<>(dataIds));
+        dataShare.setLink(link);
         return dataShare;
     }
 

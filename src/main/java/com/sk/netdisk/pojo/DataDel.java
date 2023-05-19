@@ -12,6 +12,7 @@ import lombok.Data;
 
 /**
  * 
+ * @author lsj
  * @TableName data_del
  */
 @TableName(value ="data_del")

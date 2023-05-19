@@ -13,7 +13,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 
+ * @author lsj
  * @TableName file
  */
 @TableName(value ="file")

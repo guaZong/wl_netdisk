@@ -25,7 +25,8 @@ public interface DataShareService extends IService<DataShare> {
      * @param expireDays 过期天数
      * @return DataShare
      */
-   DataShare createShareFile(List<Integer> dataId,String passCode,Integer accessNum,Integer accessStatus,Integer expireDays);
+   DataShare createShareFile(List<Integer> dataId,String passCode,Integer accessNum,
+                             Integer accessStatus,Integer expireDays);
 
     /**
      * 取消分享

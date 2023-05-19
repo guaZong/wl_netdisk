@@ -506,11 +506,10 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         Data targetFolder = dataMapper.selectOne(new QueryWrapper<Data>()
                 .eq("id", targetFolderDataId).eq("create_by", userId));
         //判断目标文件夹是否存在,判断完之后targetFolder必须是文件夹类型
-        if ((targetFolderDataId != DataEnum.ZERO_FOLDER.getIndex() && Objects.isNull(targetFolder))
-                || (!Objects.isNull(targetFolder) && targetFolder.getType() != DataEnum.FOLDER.getIndex())) {
-            throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
-        }
-
+//        if ((targetFolderDataId != DataEnum.ZERO_FOLDER.getIndex() && Objects.isNull(targetFolder))
+//                || (!Objects.isNull(targetFolder) && targetFolder.getType() != DataEnum.FOLDER.getIndex())) {
+//            throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
+//        }
         List<Data> targetDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
                 .eq("parent_data_id", targetFolderDataId).eq("create_by", userId));
         //分别定义 返回结果集、重名的文件、重名的原文件、查找目标文件下所有子文件,用于查重名
@@ -757,10 +756,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             if (Objects.isNull(copyData)) {
                 countDownLatch.countDown();
                 continue;
-            }
-            //判断复制的时候是不是复制复制到原来的文件夹或错误的复制
-            if (copyData.getParentDataId().equals(targetFolderDataId) || copyDataId == targetFolderDataId) {
-                throw new AppException(AppExceptionCodeMsg.DATA_COPY_ERR);
             }
             copyData.setName(renameFile(copyData.getName(), nameList));
             nowServiceThreadPool.execute(() -> {
