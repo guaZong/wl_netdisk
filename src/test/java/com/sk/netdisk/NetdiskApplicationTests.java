@@ -3,6 +3,7 @@ package com.sk.netdisk;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.sk.netdisk.config.rabbitmq.RabbitMQConfig;
+import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.service.DataService;
 import com.sk.netdisk.service.impl.DataServiceImpl;
@@ -19,6 +20,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -145,6 +147,21 @@ class NetdiskApplicationTests {
      * 3. 如果消息处理成功,则调用channel的basicAck接收
      * 4. 如果消息处理失败,则调用channel的basicNack拒绝接收,可以让中间件重新发送
      */
+
+
+    @Autowired
+    DataMapper dataMapper;
+
+    @Test
+    public void test4(){
+        //1.测试过期时间,死信消息,模拟回收站文件发送给正常交换机
+        rabbitTemplate.convertAndSend("del_exchange","del.finalDelData",20154);
+    }
+
+    @Test
+    public void test5(){
+        System.out.println(dataMapper.findById(22998));
+    }
 
 
 

@@ -1,6 +1,7 @@
 package com.sk.netdisk.pojo;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -47,11 +48,13 @@ public class DataShare implements Serializable {
     /**
      *
      */
+    @JsonFormat(pattern = "yyyy年MM月dd日,HH:mm")
     private Date createTime;
 
     /**
      *
      */
+    @JsonFormat(pattern = "yyyy年MM月dd日,HH:mm")
     private Date updateTime;
 
     /**

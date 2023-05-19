@@ -196,7 +196,11 @@ public interface DataService extends IService<Data> {
      */
     void restoreData(List<Integer> dataDelIds);
 
-
-
-
+    /**
+     * 根据文件id和code遍历文件
+     * @param parentDataId parentDataId
+     * @param passCode passCode
+     * @return List<DataDetInfoDto>
+     */
+    List<DataDetInfoDto> infoShareData(Integer parentDataId, String passCode);
 }

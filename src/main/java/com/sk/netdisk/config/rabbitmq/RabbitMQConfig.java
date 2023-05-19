@@ -1,5 +1,6 @@
 package com.sk.netdisk.config.rabbitmq;
 
+import com.sk.netdisk.constant.RabbitmqConstants;
 import org.springframework.amqp.core.*;
 import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -80,43 +81,27 @@ public class RabbitMQConfig {
         return container;
     }
 
+    /**
+     * 定义普通的交换机和队列并绑定
+     */
     @Bean
-    public Queue bootQueue1(){
+    public Queue delQueue(){
+        long ttl = 1000 * 60 * 60 * 24 * 30L;
         return QueueBuilder
-                .durable("test_confirm_queue")
+                .durable(RabbitmqConstants.QUEUE_DEL)
+                .deadLetterExchange(RabbitmqConstants.EXCHANGE_DLX)
+                .withArgument("x-message-ttl", ttl)
                 .build();
     }
     @Bean
-    public Exchange bootExchange1(){
-        return ExchangeBuilder.directExchange("test1_exchange").build();
+    public Exchange delExchange(){
+        return ExchangeBuilder.topicExchange(RabbitmqConstants.EXCHANGE_DEL).build();
     }
 
     @Bean
-    public Binding bind1(Queue bootQueue1, @Qualifier("bootExchange1") Exchange bootExchange){
-        return BindingBuilder.bind(bootQueue1).to(bootExchange).with("bind").noargs();
+    public Binding delBind(@Qualifier("delQueue") Queue bootQueue, @Qualifier("delExchange") Exchange bootExchange){
+        return BindingBuilder.bind(bootQueue).to(bootExchange).with(RabbitmqConstants.KEY_DEL).noargs();
     }
-
-
-    @Bean
-    public Queue bootQueue2(){
-        return QueueBuilder
-                .durable("test_ttl_queue")
-                .ttl(10000)
-                .build();
-    }
-    @Bean
-    public Exchange bootExchange2(){
-        return ExchangeBuilder.topicExchange("test2_exchange").build();
-    }
-
-    @Bean
-    public Binding bind2(Queue bootQueue2, @Qualifier("bootExchange2") Exchange bootExchange){
-        return BindingBuilder.bind(bootQueue2).to(bootExchange).with("bind.#").noargs();
-    }
-
-
-
-
 
 }
 

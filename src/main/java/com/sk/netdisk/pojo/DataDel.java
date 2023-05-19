@@ -6,6 +6,8 @@ import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
 import java.util.Date;
+
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 /**
@@ -34,6 +36,7 @@ public class DataDel implements Serializable {
     /**
      * 创建时间
      */
+    @JsonFormat(pattern = "yyyy年MM月dd日,HH:mm")
     private Date createTime;
 
 

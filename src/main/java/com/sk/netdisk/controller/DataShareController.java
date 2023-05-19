@@ -42,7 +42,10 @@ public class DataShareController {
         Integer accessNum = dataShare.getAccessNum();
         Integer accessStatus = dataShare.getAccessStatus();
         Integer expireDays = dataShare.getExpireDays();
-        if (ids.isEmpty()  || Objects.isNull(accessStatus) || Objects.isNull(expireDays)) {
+        System.out.println(ids);
+        System.out.println(accessStatus);
+        System.out.println(expireDays);
+        if (ids.isEmpty() || Objects.isNull(accessStatus) || Objects.isNull(expireDays)) {
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }
         List<Integer> dataIds = new ArrayList<>(ids);

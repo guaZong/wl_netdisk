@@ -14,7 +14,7 @@ public enum DataEnum {
      * 文件夹类型
      */
     FOLDER(0,"文件夹类型"),
-    MAX_NONE_FOLDER(0,"最顶级虚无文件夹"),
+    ZERO_FOLDER(0,"最顶级文件夹"),
     ACCESS_TO_FINAL_DEL(1,"有权限删除回收站文件"),
     SHARE_IS_LIMIT(0,"文件分享限制人数"),
     SHARE_NO_LIMIT(1,"文件分享不限制人数"),

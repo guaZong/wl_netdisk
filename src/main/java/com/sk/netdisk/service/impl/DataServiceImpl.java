@@ -33,7 +33,6 @@ import com.sk.netdisk.util.UserUtil;
 import com.sk.netdisk.util.upload.OSSUtil;
 import com.sk.netdisk.util.upload.UploadUtil;
 import com.sun.istack.Nullable;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,7 +99,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     public List<DataDetInfoDto> infoData(Integer parentDataId) {
         Integer userId = UserUtil.getLoginUserId();
         Data data = this.getById(parentDataId);
-        if (parentDataId != DataEnum.MAX_NONE_FOLDER.getIndex() && Objects.isNull(data)) {
+        if (parentDataId != DataEnum.ZERO_FOLDER.getIndex() && Objects.isNull(data)) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
         if (!Objects.isNull(data) && data.getType() != DataEnum.FOLDER.getIndex()) {
@@ -111,7 +110,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     @Override
     public DataInfoVo getDataInfo(Integer dataId) {
-        if (dataId == DataEnum.MAX_NONE_FOLDER.getIndex()) {
+        if (dataId == DataEnum.ZERO_FOLDER.getIndex()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         Integer userId = UserUtil.getLoginUserId();
@@ -122,9 +121,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         if (!data.getCreateBy().equals(userId)) {
             throw new AppException(AppExceptionCodeMsg.INVALID_PERMISSION);
         }
-        int folderNum = 0, fileNum = 0;
-        long dataSize = 0;
-        RecurCountSizeInfo recurCountSizeInfo = new RecurCountSizeInfo(folderNum, fileNum, dataSize);
+        RecurCountSizeInfo recurCountSizeInfo = new RecurCountSizeInfo(0, 0, 0);
         Date date;
         if (Objects.isNull(data.getUpdateTime())) {
             date = data.getCreateTime();
@@ -137,7 +134,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         recurCountName(data.getParentDataId(), nameBuilder);
         DataInfoVo dataInfoVo;
         if (data.getType() == DataEnum.FOLDER.getIndex()) {
-            String fileSize = getFileSize(recurCountSizeInfo.getDataSize());
+            String fileSize = CommonUtils.getFileSize(recurCountSizeInfo.getDataSize());
             dataInfoVo = new DataInfoVo("文件夹", "/" + nameBuilder.toString(), fileSize,
                     recurCountSizeInfo.getFolderNum(), recurCountSizeInfo.getFileNum(), stringDate);
         } else {
@@ -179,7 +176,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     @Override
     public Integer getParentDataId(Integer nowDataId) {
-        if (nowDataId == DataEnum.MAX_NONE_FOLDER.getIndex()) {
+        if (nowDataId == DataEnum.ZERO_FOLDER.getIndex()) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
         Data nowData = this.getById(nowDataId);
@@ -206,7 +203,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     @Override
     public List<DataPathDto> getDataPath(Integer dataId) {
         List<DataPathDto> result = new ArrayList<>();
-        if (dataId == DataEnum.MAX_NONE_FOLDER.getIndex()) {
+        if (dataId == DataEnum.ZERO_FOLDER.getIndex()) {
             result.add(new DataPathDto(0, "/"));
             return result;
         }
@@ -225,7 +222,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     }
 
     private void recurToCountPath(Data data, List<DataPathDto> result) {
-        if (data.getParentDataId() == DataEnum.MAX_NONE_FOLDER.getIndex()) {
+        if (data.getParentDataId() == DataEnum.ZERO_FOLDER.getIndex()) {
             result.add(new DataPathDto(0, "/"));
             return;
         }
@@ -244,8 +241,8 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         data.setType(folderType);
         data.setCreateTime(new Date());
         data.setCreateBy(userId);
-        if (parentDataId == DataEnum.MAX_NONE_FOLDER.getIndex()) {
-            data.setParentDataId(DataEnum.MAX_NONE_FOLDER.getIndex());
+        if (parentDataId == DataEnum.ZERO_FOLDER.getIndex()) {
+            data.setParentDataId(DataEnum.ZERO_FOLDER.getIndex());
         } else {
             Data fatherData = this.getById(parentDataId);
             if (Objects.isNull(fatherData)) {
@@ -264,7 +261,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         Integer userId = UserUtil.getLoginUserId();
         Data parentData;
         int uploadNum = 0;
-        if (targetFolderDataId != DataEnum.MAX_NONE_FOLDER.getIndex()) {
+        if (targetFolderDataId != DataEnum.ZERO_FOLDER.getIndex()) {
             parentData = this.getById(targetFolderDataId);
             if (Objects.isNull(parentData) || parentData.getType() != DataEnum.FOLDER.getIndex()) {
                 throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
@@ -281,8 +278,8 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             String fileMd5 = CommonUtils.getFileMd5(file);
             Object fileId = redisUtil.hget(RedisConstants.FILE_KEY + fileMd5, "fileId");
             if (Objects.isNull(fileId)) {
-                String path = ossUtil.easyUpload(file);
-                File newFile = createFile(fileMd5, path, userId, getFileSize(file.getSize()), String.valueOf(file.getSize()));
+                String link = ossUtil.easyUpload(file);
+                File newFile = new File(fileMd5, link, userId, CommonUtils.getFileSize(file.getSize()), String.valueOf(file.getSize()));
                 fileMapper.insert(newFile);
                 data.setFileId(newFile.getId());
                 redisStorageFile(fileMd5, newFile.getId(), file.getSize());
@@ -314,7 +311,9 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         }
         this.removeById(dataId);
         recurCountDelete(dataId);
-        dataDelService.insertDataDel(dataId, userId);
+        DataDel dataDel = dataDelService.insertDataDel(dataId, userId);
+        //延迟队列,过期之后交给死信队列,然后监听死信队列进行消费操作
+        rabbitTemplate.convertAndSend("del_exchange","del.finalDelData",dataDel.getId());
     }
 
     /**
@@ -351,7 +350,8 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                     }
                     this.removeById(dataId);
                     recurCountDelete(dataId);
-                    dataDelService.insertDataDel(dataId, userId);
+                    DataDel dataDel = dataDelService.insertDataDel(dataId, userId);
+                    rabbitTemplate.convertAndSend("del_exchange","del.finalDelData",dataDel.getId());
                 } finally {
                     countDownLatch.countDown();
                 }
@@ -381,7 +381,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             throw new AppException(AppExceptionCodeMsg.INVALID_CODE);
         }
         finalDeleteData(dataDelId, dataDel.getDataId(), userId);
-        //todo rabbitmq延时队列删除
     }
 
     /**
@@ -404,14 +403,13 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
      *
      * @param data 文件
      */
-    private void recurCountFinalDelete(Data data) {
+    public void recurCountFinalDelete(Data data) {
         if (data.getType() != DataEnum.FOLDER.getIndex()) {
             File file = fileMapper.selectById(data.getFileId());
-            System.out.println(file);
             if (!Objects.isNull(file)) {
                 redisUtil.hdecr(RedisConstants.FILE_KEY + file.getMd5(), "useNum", 1);
                 Object useNum = redisUtil.hget(RedisConstants.FILE_KEY + file.getMd5(), "useNum");
-                if ((int) useNum <=0) {
+                if ((int) useNum <= 0) {
                     ossUtil.removeData(CommonUtils.getObjectName(file.getLink()));
                     redisUtil.del(RedisConstants.FILE_KEY + file.getMd5());
                     fileMapper.deleteById(data.getFileId());
@@ -497,7 +495,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         return this.getById(dataId);
     }
 
-
+    volatile int index=0;
     @Override
     @Transactional
     public List<List<Data>> copyToNewFolder(List<Integer> dataIds, Integer targetFolderDataId) {
@@ -508,20 +506,21 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         Data targetFolder = dataMapper.selectOne(new QueryWrapper<Data>()
                 .eq("id", targetFolderDataId).eq("create_by", userId));
         //判断目标文件夹是否存在,判断完之后targetFolder必须是文件夹类型
-        if ((targetFolderDataId != DataEnum.MAX_NONE_FOLDER.getIndex() && Objects.isNull(targetFolder))
+        if ((targetFolderDataId != DataEnum.ZERO_FOLDER.getIndex() && Objects.isNull(targetFolder))
                 || (!Objects.isNull(targetFolder) && targetFolder.getType() != DataEnum.FOLDER.getIndex())) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
-        CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
-        //定义返回结果集
-        List<List<Data>> result = new ArrayList<>();
-        //重名的文件
-        List<Data> reNameList = new CopyOnWriteArrayList<>();
-        //重名的原文件
-        List<Data> sourceList = new CopyOnWriteArrayList<>();
-        //查找目标文件下所有子文件,用于查重名
+
         List<Data> targetDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
                 .eq("parent_data_id", targetFolderDataId).eq("create_by", userId));
+        //分别定义 返回结果集、重名的文件、重名的原文件、查找目标文件下所有子文件,用于查重名
+        List<List<Data>> result = new ArrayList<>();
+        List<Data> reNameList = new CopyOnWriteArrayList<>();
+        List<Data> sourceList = new CopyOnWriteArrayList<>();
+        int nowIndex=0;
+        index=1;
+        CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
+
         //开始复制操作
         for (int copyDataId : dataIds) {
             Data copyData = dataMapper.selectOne(new QueryWrapper<Data>()
@@ -530,12 +529,12 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 countDownLatch.countDown();
                 continue;
             }
-            //判断复制的时候是不是复制复制到原来的文件夹或错误的复制
-            if (targetFolderDataId != 0 && (copyData.getParentDataId().equals(targetFolderDataId)
-                    && copyData.getCreateBy().equals(targetFolder.getCreateBy()))
-                    || copyDataId == targetFolderDataId) {
-                throw new AppException(AppExceptionCodeMsg.DATA_COPY_ERR);
-            }
+//            //判断复制的时候是不是复制复制到原来的文件夹或错误的复制
+//            if (targetFolderDataId != 0 && (copyData.getParentDataId().equals(targetFolderDataId)
+//                    && copyData.getCreateBy().equals(targetFolder.getCreateBy()))
+//                    || copyDataId == targetFolderDataId) {
+//                throw new AppException(AppExceptionCodeMsg.DATA_COPY_ERR);
+//            }
             nowServiceThreadPool.execute(() -> {
                 try {
                     boolean shouldContinue = false;
@@ -601,14 +600,19 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             for (int i = 0; i < getSaveList.size(); i++) {
                 int copyDataIndex = i;
                 int getSaveIndex = i;
-                CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(
-                        () -> recurToCopy(sourceCopyDataList.get(copyDataIndex),
-                                userId, getSaveList.get(getSaveIndex).getId()));
+                CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(()->{
+                    recurToCopy(sourceCopyDataList.get(copyDataIndex), userId, getSaveList.get(getSaveIndex).getId());
+                    log.info("进入子线程: "+getSaveList.get(getSaveIndex).getId());
+                });
                 futures.add(voidCompletableFuture);
             }
+
+            log.info("循环结束");
             // 等待所有 CompletableFuture 完成
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
+            log.info("等待完毕");
         } else {
+            log.info("生成文件 "+ copyData.getFileId());
             rabbitTemplate.convertAndSend(RabbitmqConstants.FILE_EXCHANGE,
                     RabbitmqConstants.BIND_ADD_FILE_MD5, copyData.getFileId());
         }
@@ -618,7 +622,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     @Override
     public List<List<Data>> shearToNewFolder(List<Integer> dataIds, Integer targetFolderDataId) throws InterruptedException {
         Integer userId = UserUtil.getLoginUserId();
-        int maxNoneFolderIndex = DataEnum.MAX_NONE_FOLDER.getIndex();
+        int maxNoneFolderIndex = DataEnum.ZERO_FOLDER.getIndex();
         if (targetFolderDataId != maxNoneFolderIndex) {
             Data fatherData = dataMapper.findByCreateByAndId(targetFolderDataId, userId);
             if (Objects.isNull(fatherData) || fatherData.getType() != DataEnum.FOLDER.getIndex()) {
@@ -683,7 +687,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     @Override
     @Transactional
-    public void batchOverrideFiles(List<Integer> dataIds, Integer targetFolderDataId, List<Integer> sourceDataIds) throws InterruptedException {
+    public void batchOverrideFiles(List<Integer> dataIds, Integer targetFolderDataId, List<Integer> sourceDataIds) {
         Integer userId = UserUtil.getLoginUserId();
         CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
         for (int dataId : sourceDataIds) {
@@ -741,7 +745,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 .eq("id", targetFolderDataId)
                 .eq("create_by", userId));
         //判断目标文件夹是否存在,判断完之后targetFolder必须是文件夹类型
-        if ((targetFolderDataId != DataEnum.MAX_NONE_FOLDER.getIndex() && Objects.isNull(targetFolder))
+        if ((targetFolderDataId != DataEnum.ZERO_FOLDER.getIndex() && Objects.isNull(targetFolder))
                 || (!Objects.isNull(targetFolder) && targetFolder.getType() != DataEnum.FOLDER.getIndex())) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
@@ -794,6 +798,12 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         }
     }
 
+    @Override
+    public List<DataDetInfoDto> infoShareData(Integer parentDataId, String passCode) {
+
+        return null;
+    }
+
 
     /**
      * 递归还原被删除文件
@@ -819,7 +829,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     /**
      * 递归计算所有文件大小
      *
-     * @param dataId    文件id
+     * @param dataId             文件id
      * @param recurCountSizeInfo RecurCountSizeInfo
      */
     public void recurCountSize(Integer dataId, RecurCountSizeInfo recurCountSizeInfo) {
@@ -827,7 +837,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         for (Data data : dataList) {
             if (data.getType() == DataEnum.FOLDER.getIndex()) {
-                recurCountSizeInfo.setFolderNum(recurCountSizeInfo.getFolderNum()+1);
+                recurCountSizeInfo.setFolderNum(recurCountSizeInfo.getFolderNum() + 1);
                 CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(
                         () -> recurCountSize(data.getId(), recurCountSizeInfo));
                 futures.add(voidCompletableFuture);
@@ -835,71 +845,36 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 Integer fileId = this.getById(data.getId()).getFileId();
                 File file = fileMapper.selectById(fileId);
                 if (!Objects.isNull(file)) {
-                    recurCountSizeInfo.setDataSize(recurCountSizeInfo.getDataSize()+Long.parseLong(file.getBytes()));
+                    recurCountSizeInfo.setDataSize(recurCountSizeInfo.getDataSize() + Long.parseLong(file.getBytes()));
                 }
-                recurCountSizeInfo.setFileNum(recurCountSizeInfo.getFileNum()+1);
+                recurCountSizeInfo.setFileNum(recurCountSizeInfo.getFileNum() + 1);
             }
         }
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
 
-
     private Data createData(MultipartFile file, Integer parentDataId) {
         Integer userId = UserUtil.getLoginUserId();
-        Data data = new Data();
         String name = judgeReName(file.getOriginalFilename(), parentDataId, 1, userId);
         int fileType = UploadUtil.getFileType(file);
+
+
         //如果当前目录不为根目录
-        if (parentDataId != 0) {
+        if (parentDataId != DataEnum.ZERO_FOLDER.getIndex()) {
             Data parentData = this.getById(parentDataId);
-            //如果当前目录不存在
             if (Objects.isNull(parentData)) {
                 return null;
             }
-            data.setParentDataId(parentDataId);
-        } else {
-            data.setParentDataId(0);
         }
+
+        Data data = new Data();
+        data.setParentDataId(parentDataId != DataEnum.ZERO_FOLDER.getIndex() ? parentDataId : DataEnum.ZERO_FOLDER.getIndex());
         data.setName(name);
         data.setCreateBy(userId);
         data.setCreateTime(new Date());
         data.setType(fileType);
         return data;
-    }
-
-
-    private File createFile(String md5, String path, Integer userId, String size, String bytes) {
-        File newFile = new File();
-        newFile.setMd5(md5);
-        newFile.setLink(path);
-        newFile.setCreateTime(new Date());
-        newFile.setCreateBy(userId);
-        newFile.setSize(size);
-        newFile.setBytes(bytes);
-        return newFile;
-    }
-
-    /**
-     * 根据字节值来计算文件大小
-     *
-     * @param sizeInBytes 文件字节大小
-     * @return String
-     */
-    public String getFileSize(long sizeInBytes) {
-        double sizeInKb = sizeInBytes / 1024.0;
-        if (sizeInKb < 1) {
-            return sizeInBytes + " B";
-        }
-        double sizeInMb = sizeInKb / 1024.0;
-        if (sizeInMb < 1) {
-            return String.format("%.2f KB", sizeInKb);
-        }
-        double sizeInGb = sizeInMb / 1024.0;
-        if (sizeInGb < 1) {
-            return String.format("%.2f MB", sizeInMb);
-        }
-        return String.format("%.2f GB", sizeInGb);
     }
 
 
@@ -924,36 +899,12 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
      *
      * @param name         名字
      * @param parentDataId 父文件id
+     * @param type         类型
+     * @param userId       用户ID
      * @return String
      */
     private String judgeReName(String name, Integer parentDataId, Integer type, Integer userId) {
-        StringBuilder stringBuilder = new StringBuilder();
-        if (type == 0) {
-            List<Data> dataList = this.list(new QueryWrapper<Data>()
-                    .eq("parent_data_id", parentDataId)
-                    .eq("type", DataEnum.FOLDER.getIndex())
-                    .eq("create_by", userId));
-            for (Data data : dataList) {
-                if (data.getName().equals(name)) {
-                    stringBuilder.append(name).append("_").append(RandomUtil.randomNumbers(8));
-                    return stringBuilder.toString();
-                }
-            }
-        } else {
-            List<Data> dataList = this.list(new QueryWrapper<Data>()
-                    .eq("parent_data_id", parentDataId)
-                    .ne("type", DataEnum.FOLDER.getIndex())
-                    .eq("create_by", userId));
-            for (Data data : dataList) {
-                if (data.getName().equals(name)) {
-                    String str = name.split("\\.")[0];
-                    String last = name.split("\\.")[1];
-                    stringBuilder.append(str).append("_").append(RandomUtil.randomNumbers(8)).append(".").append(last);
-                    return stringBuilder.toString();
-                }
-            }
-        }
-        return name;
+        return judgeReName(name, parentDataId, type, userId, null);
     }
 
     /**
@@ -961,48 +912,46 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
      *
      * @param name         名字
      * @param parentDataId 父文件id
+     * @param type         类型
+     * @param userId       用户ID
+     * @param dataId       数据ID
      * @return String
      */
     private String judgeReName(String name, Integer parentDataId, Integer type, Integer userId, Integer dataId) {
         StringBuilder stringBuilder = new StringBuilder();
-        if (type == 0) {
-            List<Data> dataList = this.list(new QueryWrapper<Data>()
-                    .eq("parent_data_id", parentDataId)
-                    .eq("type", DataEnum.FOLDER.getIndex())
-                    .eq("create_by", userId));
-            for (Data data : dataList) {
-                if (data.getName().equals(name) && !data.getId().equals(dataId)) {
+        List<Data> dataList = this.list(new QueryWrapper<Data>()
+                .eq("parent_data_id", parentDataId)
+                .eq("create_by", userId));
+        for (Data data : dataList) {
+            if (data.getName().equals(name) && (!data.getId().equals(dataId))) {
+                if (type == 0) {
                     stringBuilder.append(name).append("_").append(RandomUtil.randomNumbers(8));
-                    return stringBuilder.toString();
-                }
-            }
-        } else {
-            List<Data> dataList = this.list(new QueryWrapper<Data>()
-                    .eq("parent_data_id", parentDataId)
-                    .ne("type", DataEnum.FOLDER.getIndex())
-                    .eq("create_by", userId));
-            for (Data data : dataList) {
-                if (data.getName().equals(name) && !data.getId().equals(dataId)) {
+                } else {
                     String str = name.split("\\.")[0];
                     String last = name.split("\\.")[1];
                     stringBuilder.append(str).append("_").append(RandomUtil.randomNumbers(8)).append(".").append(last);
-                    return stringBuilder.toString();
                 }
+                return stringBuilder.toString();
             }
         }
         return name;
     }
 
+    /**
+     * 查询是否重名并重命名为  file(x) x为数字
+     *
+     * @param fileName      文件名字
+     * @param existingNames 要查询的文件名字集合
+     * @return String
+     */
     public String renameFile(String fileName, List<String> existingNames) {
         Set<String> existingSet = new HashSet<>(existingNames);
         String newFileName = fileName;
         int counter = 1;
-
         while (existingSet.contains(newFileName)) {
             int dotIndex = fileName.lastIndexOf(".");
             String baseName = (dotIndex != -1) ? fileName.substring(0, dotIndex) : fileName;
             String extension = (dotIndex != -1) ? fileName.substring(dotIndex) : "";
-
             String candidateName = baseName + "(" + counter + ")" + extension;
             if (existingSet.contains(candidateName)) {
                 counter++;
@@ -1010,27 +959,25 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 newFileName = candidateName;
             }
         }
-
         return newFileName;
     }
 
+
+    public boolean judgeNowFolderIsSourceData(Integer nowFolderId,Integer sourceDataId){
+        return false;
+    }
 
 
     @Override
     protected void finalize() throws Throwable {
         try {
             // 在对象被垃圾回收前确保线程池被关闭
-            closeThreadPool();
+            nowServiceThreadPool.shutdown();
+            recurHelpThreadPool.shutdown();
         } finally {
             super.finalize();
         }
     }
-
-    private void closeThreadPool() {
-        nowServiceThreadPool.shutdown();
-        recurHelpThreadPool.shutdown();
-    }
-
 
 }
 

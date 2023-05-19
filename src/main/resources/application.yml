@@ -11,7 +11,8 @@ spring:
     password: 'Lishoujia991121.'
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.alibaba.druid.pool.DruidDataSource
-
+  aop:
+    auto: true
 
   druid:
     stat-view-servlet:
@@ -83,6 +84,9 @@ spring:
     #这里我在config里面配置了,所以这里有没有都可以
     template:
       mandatory: true
+      retry:
+        max-attempts: 5
+
 
 
 

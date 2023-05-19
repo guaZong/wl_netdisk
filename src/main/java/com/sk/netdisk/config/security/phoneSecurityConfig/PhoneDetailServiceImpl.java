@@ -1,4 +1,4 @@
-package com.sk.netdisk.service.impl;
+package com.sk.netdisk.config.security.phoneSecurityConfig;
 
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;

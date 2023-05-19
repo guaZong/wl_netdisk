@@ -13,13 +13,13 @@ import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.UserMapper;
 import com.sk.netdisk.pojo.Data;
-import com.sk.netdisk.pojo.File;
 import com.sk.netdisk.pojo.User;
 import com.sk.netdisk.pojo.dto.UserInfoDto;
 import com.sk.netdisk.pojo.vo.RabbitCodeVO;
 import com.sk.netdisk.pojo.vo.RecurCountSizeInfo;
 import com.sk.netdisk.service.UserService;
 import com.sk.netdisk.constant.RedisConstants;
+import com.sk.netdisk.util.CommonUtils;
 import com.sk.netdisk.util.Redis.RedisUtil;
 import com.sk.netdisk.util.Regex.RegexUtils;
 import com.sk.netdisk.util.ResponseResult;
@@ -33,7 +33,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.*;
@@ -181,7 +180,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         RecurCountSizeInfo recurCountSizeInfo = new RecurCountSizeInfo(0, 0, 0);
         if (Objects.isNull(storage)) {
             getUseSize(userId,recurCountSizeInfo);
-            String fileSize = dataService.getFileSize(recurCountSizeInfo.getDataSize());
+            String fileSize = CommonUtils.getFileSize(recurCountSizeInfo.getDataSize());
             redisUtil.set(RedisConstants.USER_STORAGE + userId, fileSize,60);
             return fileSize;
         }else{
@@ -197,7 +196,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
 
     private void getUseSize(Integer userId, RecurCountSizeInfo recurCountSizeInfo) {
         List<Data> dataList = dataMapper.selectList(new QueryWrapper<Data>()
-                .eq("parent_data_id", DataEnum.MAX_NONE_FOLDER).eq("create_by", userId));
+                .eq("parent_data_id", DataEnum.ZERO_FOLDER).eq("create_by", userId));
         CountDownLatch countDownLatch = new CountDownLatch(dataList.size());
         for (Data data : dataList) {
             nowServiceThreadPool.submit(() -> {
@@ -222,7 +221,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
     public void reFreshSize(Integer userId){
         RecurCountSizeInfo recurCountSizeInfo = new RecurCountSizeInfo(0, 0, 0);
             getUseSize(userId,recurCountSizeInfo);
-            String fileSize = dataService.getFileSize(recurCountSizeInfo.getDataSize());
+            String fileSize = CommonUtils.getFileSize(recurCountSizeInfo.getDataSize());
             redisUtil.set(RedisConstants.USER_STORAGE + userId, fileSize,60);
     }
 

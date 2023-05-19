@@ -1,6 +1,7 @@
 package com.sk.netdisk.pojo;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -32,11 +33,13 @@ public class DataList implements Serializable {
     /**
      * 
      */
+    @JsonFormat(pattern = "yyyy年MM月dd日,HH:mm")
     private Date createTime;
 
     /**
      * 
      */
+    @JsonFormat(pattern = "yyyy年MM月dd日,HH:mm")
     private Date updateTime;
 
     /**

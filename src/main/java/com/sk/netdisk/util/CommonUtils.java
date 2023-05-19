@@ -41,49 +41,6 @@ public class CommonUtils {
         return uri.getPath().split("/", 2)[1];
     }
 
-    /**
-     * 获取一个新的链接
-     *
-     * @param link 旧链接
-     * @return String
-     */
-    public static String getNewLink(String link) {
-        int i = link.lastIndexOf("/");
-        String oldLink = link.substring(0, i);
-        String str = link.substring(i + 1);
-        String name = String.valueOf(IdWorker.getId());
-        String last = str.split("\\.")[1];
-        return oldLink + "/" + name + "." + last;
-    }
-
-    /**
-     * 获取文件的MD5值
-     *
-     * @param file File对象
-     * @return String MD5值
-     */
-    public static String getFileMd5(File file) throws IOException, NoSuchAlgorithmException {
-        // 检查文件是否存在
-        if (!file.exists() || !file.isFile()) {
-            throw new IOException("文件不存在或不是一个文件");
-        }
-
-        MessageDigest md5 = MessageDigest.getInstance("MD5");
-        FileInputStream fis = new FileInputStream(file);
-        byte[] buffer = new byte[1024];
-        int length;
-        while ((length = fis.read(buffer)) != -1) {
-            md5.update(buffer, 0, length);
-        }
-        fis.close();
-
-        byte[] digest = md5.digest();
-        StringBuilder sb = new StringBuilder();
-        for (byte b : digest) {
-            sb.append(String.format("%02x", b & 0xff));
-        }
-        return sb.toString();
-    }
 
     /**
      * 获取文件的MD5值
@@ -107,5 +64,28 @@ public class CommonUtils {
             sb.append(String.format("%02x", b & 0xff));
         }
         return sb.toString();
+    }
+
+
+    /**
+     * 根据字节值来计算文件大小
+     *
+     * @param sizeInBytes 文件字节大小
+     * @return String
+     */
+    public static String getFileSize(long sizeInBytes) {
+        double sizeInKb = sizeInBytes / 1024.0;
+        if (sizeInKb < 1) {
+            return sizeInBytes + " B";
+        }
+        double sizeInMb = sizeInKb / 1024.0;
+        if (sizeInMb < 1) {
+            return String.format("%.2f KB", sizeInKb);
+        }
+        double sizeInGb = sizeInMb / 1024.0;
+        if (sizeInGb < 1) {
+            return String.format("%.2f MB", sizeInMb);
+        }
+        return String.format("%.2f GB", sizeInGb);
     }
 }

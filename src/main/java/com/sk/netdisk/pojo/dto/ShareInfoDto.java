@@ -33,4 +33,8 @@ public class ShareInfoDto {
     private Integer lookNum;
 
     private List<Integer> dataIds;
+
+    private List<String> nameList;
+
+    private List<Integer> type;
 }

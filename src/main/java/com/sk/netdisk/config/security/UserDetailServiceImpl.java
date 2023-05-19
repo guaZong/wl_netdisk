@@ -1,4 +1,4 @@
-package com.sk.netdisk.service.impl;
+package com.sk.netdisk.config.security;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.sk.netdisk.mapper.UserMapper;

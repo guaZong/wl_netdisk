@@ -1,6 +1,5 @@
 package com.sk.netdisk.constant;
 
-import com.sk.netdisk.util.UserUtil;
 
 /**
  * 存放Redis的一些key值

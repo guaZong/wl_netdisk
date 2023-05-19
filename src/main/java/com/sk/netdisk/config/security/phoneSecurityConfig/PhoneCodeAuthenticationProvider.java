@@ -51,7 +51,6 @@ public class PhoneCodeAuthenticationProvider implements AuthenticationProvider {
         Object code=authentication.getCredentials();
         // redis中保存的手机号和验证码
         String redisPhoneCode = String.valueOf(redisUtil.get(RedisConstants.PHONE_LOGIN_KEY+username));
-        System.out.println("redisCode"+redisPhoneCode);
         // 获取authentication参数的principal属性作为手机号
         if (StringUtils.isEmpty(redisPhoneCode)) {
             throw new BadCredentialsException("未发送手机验证码");

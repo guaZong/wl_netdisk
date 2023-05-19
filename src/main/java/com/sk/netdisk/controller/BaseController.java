@@ -2,6 +2,7 @@ package com.sk.netdisk.controller;
 
 import com.sk.netdisk.controller.request.GeneralRequest;
 import com.sk.netdisk.enums.AppExceptionCodeMsg;
+import com.sk.netdisk.enums.DataEnum;
 import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.service.DataService;
@@ -24,6 +25,7 @@ import java.util.Objects;
 
 /**
  * 无需认证接口
+ *
  * @author Administrator
  */
 @RestController
@@ -57,11 +59,11 @@ public class BaseController {
     @GetMapping("/sendCode")
     @ApiImplicitParams(
             {
-                    @ApiImplicitParam(name = "username", value = "手机号码",required = true)
+                    @ApiImplicitParam(name = "username", value = "手机号码", required = true)
             }
     )
     public ResponseResult sendCode(String username) {
-        if(StringUtils.isAnyBlank(username)){
+        if (StringUtils.isAnyBlank(username)) {
             throw new AppException(AppExceptionCodeMsg.PHONE_IS_NULL);
         }
         String code = userService.sendPhoneCode(username);
@@ -83,26 +85,26 @@ public class BaseController {
         String password = generalRequest.getPassword();
         String rePassword = generalRequest.getRePassword();
         String code = generalRequest.getCode();
-        if(StringUtils.isAnyBlank(password,rePassword,phoneNumber,code)){
+        if (StringUtils.isAnyBlank(password, rePassword, phoneNumber, code)) {
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }
-        if(!RegexUtils.isPhoneInvalid(phoneNumber)){
+        if (!RegexUtils.isPhoneInvalid(phoneNumber)) {
             throw new AppException(AppExceptionCodeMsg.PHONE_FORMAT_INVALID);
         }
-        if(!password.equals(rePassword)){
+        if (!password.equals(rePassword)) {
             throw new AppException(AppExceptionCodeMsg.RE_PASSWORD_INVALID);
         }
-        return userService.pSetNewPwd(phoneNumber,code,password,rePassword);
+        return userService.pSetNewPwd(phoneNumber, code, password, rePassword);
     }
 
 
     @ApiOperation(value = "发送删除回收站的验证码")
     @GetMapping("/sendFinalDelCode")
     public ResponseResult sendFinalDelCode(String phoneNumber) {
-        if(StringUtils.isAnyBlank(phoneNumber)){
+        if (StringUtils.isAnyBlank(phoneNumber)) {
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }
-        if(!RegexUtils.isPhoneInvalid(phoneNumber)){
+        if (!RegexUtils.isPhoneInvalid(phoneNumber)) {
             throw new AppException(AppExceptionCodeMsg.PHONE_FORMAT_INVALID);
         }
         String code = userService.senFinalDelCode(phoneNumber);
@@ -120,27 +122,29 @@ public class BaseController {
     }
 
 
-
-    @ApiOperation(value = "遍历某个被分享的文件")
+    @ApiOperation(value = "遍历某个被分享的文件所有id")
     @GetMapping("/getShareData")
     public ResponseResult getShareData(@RequestBody GeneralRequest generalRequest) {
         String passCode = generalRequest.getPassCode();
         String uuid = generalRequest.getLink();
-        if(StringUtils.isEmpty(uuid)){
+        if (StringUtils.isEmpty(uuid)) {
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }
-        List<Integer> dataIds = dataShareService.getShareData(uuid,passCode);
+        List<Integer> dataIds = dataShareService.getShareData(uuid, passCode);
         return ResponseResult.success(dataIds);
     }
 
 
-    @ApiOperation(value = "遍历文件")
+    @ApiOperation(value = "根据文件id和code遍历文件")
     @GetMapping("/infoData/{parentDataId}")
-    public ResponseResult infoData(@PathVariable Integer parentDataId) {
+    public ResponseResult infoData(@PathVariable Integer parentDataId, @RequestParam String passCode) {
         if (Objects.isNull(parentDataId)) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
-        List<DataDetInfoDto> dataList = dataService.infoData(parentDataId);
+        if (parentDataId == DataEnum.ZERO_FOLDER.getIndex()) {
+            throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
+        }
+        List<DataDetInfoDto> dataList = dataShareService.infoShareData(parentDataId);
         return ResponseResult.success(dataList);
     }
 

@@ -57,8 +57,6 @@ public class PhoneAuthenticationFilter extends AbstractAuthenticationProcessingF
             JsonNode jsonNode = objectMapper.readTree(inputStream);
             username = jsonNode.get("username").asText();
             code = jsonNode.get("code").asText();
-            System.out.println(username);
-            System.out.println(code);
         } catch (IOException e) {
             ResponseResult.out(response,ResponseResult.error(AppExceptionCodeMsg.BUSY));
         }

@@ -42,4 +42,16 @@ public class RabbitmqConstants {
     public static final String BIND_ADD_FILE_MD5="addMd5.bind";
 
 
+    public static final String EXCHANGE_DLX="dlx_exchange";
+
+    public static final String QUEUE_DLX="dlx_queue";
+
+    public static final String KEY_DLX="dlx.#";
+
+    public static final String EXCHANGE_DEL="del_exchange";
+
+    public static final String QUEUE_DEL="del_queue";
+
+    public static final String KEY_DEL="del.#";
+
 }

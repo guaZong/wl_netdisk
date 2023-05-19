@@ -17,6 +17,7 @@ import com.sk.netdisk.mapper.ShareMapper;
 import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.DataShare;
 import com.sk.netdisk.pojo.Share;
+import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.pojo.dto.ShareInfoDto;
 import com.sk.netdisk.service.DataService;
 import com.sk.netdisk.service.DataShareService;
@@ -117,6 +118,7 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
                 //todo 如果expireDays不是-1就把他放入延迟队列中去
             }
         });
+        dataShare.setDataIds(new HashSet<>(dataIds));
         return dataShare;
     }
 
@@ -131,7 +133,7 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         }
         redisUtil.del(RedisConstants.SHARE_KEY + shareId);
         if (dataShare.getExpireDays() != DataEnum.SHARE_IS_BOUNDLESS.getIndex()) {
-            //todo 如果shareId不是-1就删除延迟队列里的数据
+            //todo 如果expireDays不是-1就删除延迟队列里的数据
         }
         shareMapper.deleteByShareId(shareId);
         this.removeById(shareId);
@@ -182,6 +184,8 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
                     shareInfo.setDownloadNum(downloadNum);
                     shareInfo.setLink(getLink(shareInfo.getLink()));
                     shareInfo.setDataIds(dataIds);
+                    shareInfo.setNameList(dataMapper.findNameByIds(dataIds));
+                    shareInfo.setType(dataMapper.findTypeByIds(dataIds));
                 } finally {
                     countDownLatch.countDown();
                 }
@@ -244,6 +248,13 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         }
         return dataIds;
     }
+
+    @Override
+    public List<DataDetInfoDto> infoShareData(Integer parentDataId) {
+
+        return  dataMapper.visitorInfoData(parentDataId);
+    }
+
 
     /**
      * 创建分享文件相关redis

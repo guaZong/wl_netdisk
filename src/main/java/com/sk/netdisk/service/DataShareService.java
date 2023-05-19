@@ -3,6 +3,7 @@ package com.sk.netdisk.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.DataShare;
+import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.pojo.dto.ShareInfoDto;
 
 import java.util.List;
@@ -62,4 +63,11 @@ public interface DataShareService extends IService<DataShare> {
      * @return List<Integer>
      */
     List<Integer> getShareData(String uuid,String passCode);
+
+ /**
+  * 无权限遍历分享文件
+  * @param parentDataId parentDataId
+  * @return  List<DataDetInfoDto>
+  */
+    List<DataDetInfoDto> infoShareData(Integer parentDataId);
 }
