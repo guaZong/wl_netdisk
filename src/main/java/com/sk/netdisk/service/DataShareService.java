@@ -61,14 +61,16 @@ public interface DataShareService extends IService<DataShare> {
      * 通过链接中的uuid获取分享文件
      * @param uuid uuid
      * @param passCode passCode
-     * @return List<Integer>
+     * @return List<DataDetInfoDto>
      */
-    List<Integer> getShareData(String uuid,String passCode);
+    List<DataDetInfoDto> getShareData(String uuid,String passCode);
 
- /**
-  * 无权限遍历分享文件
-  * @param parentDataId parentDataId
-  * @return  List<DataDetInfoDto>
-  */
-    List<DataDetInfoDto> infoShareData(Integer parentDataId);
+    /**
+     * 无权限遍历分享文件
+     * @param parentDataId parentDataId
+     * @param passCode passCode
+     * @param shareId shareId
+     * @return List<DataDetInfoDto>
+     */
+    List<DataDetInfoDto> infoShareData(Integer parentDataId,String passCode,Integer shareId);
 }

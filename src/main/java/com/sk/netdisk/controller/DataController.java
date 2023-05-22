@@ -57,10 +57,10 @@ public class DataController {
         if (Objects.isNull(parentDataId)) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
-        if (Objects.isNull(folderName)) {
+        if (StringUtils.isEmpty(folderName)) {
             throw new AppException(AppExceptionCodeMsg.NAME_IS_NULL);
         }
-        Data newFolder = dataService.createFolder(parentDataId, folderName);
+        Data newFolder = dataService.createFolder(parentDataId, folderName.trim());
         return ResponseResult.success(newFolder);
     }
 
@@ -103,7 +103,7 @@ public class DataController {
         if (StringUtils.isEmpty(name)) {
             throw new AppException(AppExceptionCodeMsg.NAME_IS_NULL);
         }
-        return ResponseResult.success(dataService.updateDataName(dataId, name));
+        return ResponseResult.success(dataService.updateDataName(dataId, name.trim()));
     }
 
 
@@ -196,12 +196,13 @@ public class DataController {
         Set<Integer> sourceDataIds = generalRequest.getSids();
         Set<Integer> dataIds = generalRequest.getIds();
         Integer newDataId = generalRequest.getTargetFolderId();
+        Integer auto=0;
         if (dataIds.isEmpty() || newDataId == null || sourceDataIds.isEmpty() || dataIds.size() != sourceDataIds.size()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         List<Integer> ids = new ArrayList<>(dataIds);
         List<Integer> sourceIds = new ArrayList<>(sourceDataIds);
-        dataService.batchOverrideFiles(ids, newDataId, sourceIds);
+        dataService.batchOverrideFiles(ids, newDataId, sourceIds,auto);
         return ResponseResult.success();
     }
 
@@ -290,6 +291,18 @@ public class DataController {
         }
         List<DataPathDto> dataPath = dataService.getDataPath(dataId);
         return ResponseResult.success(dataPath);
+    }
+
+    @ApiOperation(value = "修改文件排序规则")
+    @PostMapping("/setSortNum")
+    public ResponseResult setSortNum(@RequestBody GeneralRequest generalRequest) {
+        Integer sortType = generalRequest.getSortType();
+        Integer sortOrder = generalRequest.getSortOrder();
+        if (Objects.isNull(sortType) || Objects.isNull(sortOrder)) {
+            throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
+        }
+        dataService.setSortNum(sortType,sortOrder);
+        return ResponseResult.success();
     }
 
 

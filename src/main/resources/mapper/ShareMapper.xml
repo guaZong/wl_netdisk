@@ -35,4 +35,12 @@
         from share
         where share_id = #{shareId}
     </select>
+
+    <delete id="deleteByDataId">
+        delete
+        from share
+        where data_id = #{dataId}
+    </delete>
+
+
 </mapper>

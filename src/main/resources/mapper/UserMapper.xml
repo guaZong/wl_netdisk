@@ -43,7 +43,9 @@
                u.is_vip,
                u.create_time,
                u.is_lock
-               from user u
-        where u.user_id=#{userId} and is_delete=0
+        from user u
+        where u.user_id = #{userId}
+          and is_delete = 0
     </select>
+
 </mapper>

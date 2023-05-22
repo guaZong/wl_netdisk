@@ -103,7 +103,7 @@ public interface DataMapper extends BaseMapper<Data> {
     /**
      * 直接删除文件
      * @param dataId dataId
-     * @return
+     * @return Integer
      */
     Integer finalDeleteData(Integer dataId);
 
@@ -127,6 +127,13 @@ public interface DataMapper extends BaseMapper<Data> {
      * @return List<Integer>
      */
     List<Integer> findTypeByIds(List<Integer> dataIds);
+
+    /**
+     * 通过id集合查询文件集合
+     * @param dataIds dataIds
+     * @return List<Integer>
+     */
+    List<DataDetInfoDto> findDataByIds(List<Integer> dataIds);
 
     /**
      * 根据文件夹id遍历分享文件

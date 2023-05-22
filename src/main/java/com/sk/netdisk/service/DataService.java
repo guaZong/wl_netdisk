@@ -75,6 +75,13 @@ public interface DataService extends IService<Data> {
     List<DataPathDto> getDataPath(Integer dataId);
 
     /**
+     * 排序文件
+     * @param sortType 排序类型
+     * @param sortOrder 排序方式
+     */
+    void setSortNum(Integer sortType,Integer sortOrder);
+
+    /**
      * 创建文件夹
      *
      * @param parentDataId 父文件夹id
@@ -163,15 +170,16 @@ public interface DataService extends IService<Data> {
     List<List<Data>> shearToNewFolder(List<Integer> dataIds, Integer newDataId) throws InterruptedException;
 
     /**
-     * 批量覆盖原有文件
+     * 批量覆盖原有文件,分为好多种批量覆盖,复制同名-->覆盖,剪切同名-->覆盖,还原同名-->覆盖
      *
      * @param ids       将要进行覆盖的文件id
      * @param newDataId 某个文件夹id下进行
      * @param sourceIds 将要被覆盖的id
+     * @param status 指标
      * @throws InterruptedException InterruptedException
      *
      */
-    void batchOverrideFiles(List<Integer> ids, Integer newDataId, List<Integer> sourceIds) throws InterruptedException;
+    void batchOverrideFiles(List<Integer> ids, Integer newDataId, List<Integer> sourceIds,Integer status) throws InterruptedException;
 
     /**
      * 批量生成副本

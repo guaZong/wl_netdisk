@@ -33,6 +33,14 @@ public interface ShareMapper extends BaseMapper<Share> {
      * @return
      */
     List<Integer> selectIdsByShareId(Integer shareId);
+
+    /**
+     * 根据文件id删除分享数据
+     * @param dataId
+     */
+    void deleteByDataId(Integer dataId);
+
+
 }
 
 

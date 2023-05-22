@@ -119,33 +119,35 @@ public class BaseController {
     @ApiOperation(value = "密码登录")
     @PostMapping("/plogin")
     public void plogin() {
+
     }
 
 
-    @ApiOperation(value = "遍历某个被分享的文件所有id")
+    @ApiOperation(value = "遍历某个被分享的文件")
     @GetMapping("/getShareData")
-    public ResponseResult getShareData(@RequestBody GeneralRequest generalRequest) {
-        String passCode = generalRequest.getPassCode();
-        String uuid = generalRequest.getLink();
-        if (StringUtils.isEmpty(uuid)) {
+    public ResponseResult getShareData(String link,String passCode) {
+        if (StringUtils.isEmpty(link)) {
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }
-        List<Integer> dataIds = dataShareService.getShareData(uuid, passCode);
-        return ResponseResult.success(dataIds);
+        List<DataDetInfoDto> dataList = dataShareService.getShareData(link, passCode);
+        return ResponseResult.success(dataList);
     }
 
 
     @ApiOperation(value = "根据文件id和code遍历文件")
     @GetMapping("/infoData/{parentDataId}")
-    public ResponseResult infoData(@PathVariable Integer parentDataId, @RequestParam String passCode) {
-        if (Objects.isNull(parentDataId)) {
+    public ResponseResult infoData(@PathVariable Integer parentDataId,@RequestBody GeneralRequest generalRequest) {
+        Integer shareId = generalRequest.getShareId();
+        String passCode = generalRequest.getPassCode();
+        if (Objects.isNull(parentDataId) || Objects.isNull(shareId)) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
         if (parentDataId == DataEnum.ZERO_FOLDER.getIndex()) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
-        List<DataDetInfoDto> dataList = dataShareService.infoShareData(parentDataId);
+        List<DataDetInfoDto> dataList = dataShareService.infoShareData(parentDataId,passCode,shareId);
         return ResponseResult.success(dataList);
     }
+
 
 }

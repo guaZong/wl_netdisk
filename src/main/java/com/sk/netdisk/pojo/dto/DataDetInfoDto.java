@@ -64,5 +64,9 @@ public class DataDetInfoDto {
      * 文件大小
      */
     private String size;
+    /**
+     * 文件大小 比特
+     */
+    private Long bytes;
 
 }

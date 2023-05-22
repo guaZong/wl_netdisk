@@ -31,6 +31,13 @@ public interface DataShareMapper extends BaseMapper<DataShare> {
      */
     DataShare selectById(Integer shareId);
 
+    /**
+     * 根据id删除id
+     * @param shareId shareId
+     * @return boolean boolean
+     */
+    boolean deleteById(Integer shareId);
+
 }
 
 

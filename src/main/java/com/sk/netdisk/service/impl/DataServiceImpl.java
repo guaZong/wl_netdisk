@@ -15,6 +15,7 @@ import com.sk.netdisk.enums.DataEnum;
 import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.FileMapper;
+import com.sk.netdisk.mapper.ShareMapper;
 import com.sk.netdisk.mapper.UserMapper;
 import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.DataDel;
@@ -34,6 +35,7 @@ import com.sk.netdisk.util.upload.OSSUtil;
 import com.sk.netdisk.util.upload.UploadUtil;
 import com.sun.istack.Nullable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -72,10 +74,15 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     private final ExecutorService recurHelpThreadPool;
 
+    private final ShareMapper shareMapper;
+
+
     @Autowired
     public DataServiceImpl(DataMapper dataMapper, RedisUtil redisUtil,
                            DataDelService dataDelService, OSSUtil ossUtil,
-                           UserMapper userMapper, FileMapper fileMapper, RabbitTemplate rabbitTemplate) {
+                           UserMapper userMapper, FileMapper fileMapper,
+                           RabbitTemplate rabbitTemplate, ShareMapper shareMapper) {
+        this.shareMapper = shareMapper;
 
 
         ThreadFactory namedThreadFactory1 = new NamedThreadFactory("DataServiceImpl", false);
@@ -105,7 +112,77 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         if (!Objects.isNull(data) && data.getType() != DataEnum.FOLDER.getIndex()) {
             throw new AppException(AppExceptionCodeMsg.DATA_NOT_ENTER);
         }
-        return dataMapper.findListByCreateByAndParentIdInnerFileId(parentDataId, userId);
+        List<DataDetInfoDto> dataList = dataMapper.findListByCreateByAndParentIdInnerFileId(parentDataId, userId);
+        if (dataList.isEmpty()) {
+            return dataList;
+        }
+        String sortKey = RedisConstants.SORT_KEY + userId;
+        Integer sortType = (Integer) redisUtil.hget(sortKey, "sortType");
+        Integer sortOrder = (Integer) redisUtil.hget(sortKey, "sortOrder");
+        if (Objects.isNull(sortOrder) || Objects.isNull(sortType)) {
+            setSortNum(1, 1);
+            return dataList;
+        }
+        Comparator<DataDetInfoDto> dataNameComparator = getComparator(sortType, sortOrder);
+        dataList.sort(dataNameComparator);
+        return dataList;
+
+        //了解comparable和comparator区别,并且了解lambda表达式和stream,把前两天的completableFuture总结一下,多线程事务自己下去写
+    }
+
+    private Comparator<DataDetInfoDto> getComparator(Integer sortType, Integer sortOrder) {
+        //按序遍历，这里要好好学习Comparator的知识
+        Comparator<DataDetInfoDto> dataNameComparator = Comparator
+                .comparing(DataDetInfoDto::getType, Comparator.comparingInt(type -> type == 0 ? 0 : 1));
+        //默认是升序遍历 esc
+        if (sortOrder == DataEnum.SORT_ORDER_DESC.getIndex()) {
+            if (sortType == DataEnum.SORT_TYPE_NAME.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing((s1,s2)->{
+                    try {
+                        int num1 = Integer.parseInt(s1.getName());
+                        int num2 = Integer.parseInt(s2.getName());
+                        return Integer.compare(num2, num1);
+                    } catch (NumberFormatException e) {
+                        // 处理非数字字符串
+                        if (StringUtils.isNumeric(s1.getName()) && !StringUtils.isNumeric(s2.getName())) {
+                            return 1; // s1 是数字，s2 是非数字，将 s2 排在前面
+                        } else if (!StringUtils.isNumeric(s1.getName()) && StringUtils.isNumeric(s2.getName())) {
+                            return -1; // s1 是非数字，s2 是数字，将 s1 排在前面
+                        } else {
+                            return s2.getName().compareTo(s1.getName()); // 都是非数字字符串，按照字符串顺序降序排序
+                        }
+                    }
+                });
+            } else if (sortType == DataEnum.SORT_TYPE_TIME.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getCreateTime, Comparator.reverseOrder());
+            } else if (sortType == DataEnum.SORT_TYPE_SIZE.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getBytes, Comparator.nullsLast(Comparator.reverseOrder()));
+            }
+        } else {
+            if (sortType == DataEnum.SORT_TYPE_NAME.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing((s1,s2)->{
+                    try {
+                        int num1 = Integer.parseInt(s1.getName());
+                        int num2 = Integer.parseInt(s2.getName());
+                        return Integer.compare(num1, num2);
+                    } catch (NumberFormatException e) {
+                        // 处理非数字字符串
+                        if (StringUtils.isNumeric(s1.getName()) && !StringUtils.isNumeric(s2.getName())) {
+                            return -1; // s1 是数字，s2 是非数字，将 s1 排在前面
+                        } else if (!StringUtils.isNumeric(s1.getName()) && StringUtils.isNumeric(s2.getName())) {
+                            return 1; // s1 是非数字，s2 是数字，将 s2 排在前面
+                        } else {
+                            return s1.getName().compareTo(s2.getName()); // 都是非数字字符串，按照字符串顺序排序
+                        }
+                    }
+                });
+            } else if (sortType == DataEnum.SORT_TYPE_TIME.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getCreateTime);
+            } else if (sortType == DataEnum.SORT_TYPE_SIZE.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getBytes, Comparator.nullsLast(Comparator.naturalOrder()));
+            }
+        }
+        return dataNameComparator;
     }
 
     @Override
@@ -221,6 +298,21 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         return result;
     }
 
+    @Override
+    public void setSortNum(Integer sortType, Integer sortOrder) {
+        Integer userId = UserUtil.getLoginUserId();
+        if (sortType != DataEnum.SORT_TYPE_NAME.getIndex() && sortType != DataEnum.SORT_TYPE_TIME.getIndex()
+                && sortType != DataEnum.SORT_TYPE_SIZE.getIndex()) {
+            throw new AppException(AppExceptionCodeMsg.BUSY);
+        }
+        if (sortOrder != DataEnum.SORT_ORDER_DESC.getIndex() && sortOrder != DataEnum.SORT_ORDER_ESC.getIndex()) {
+            throw new AppException(AppExceptionCodeMsg.BUSY);
+        }
+        String sortKey = RedisConstants.SORT_KEY + userId;
+        redisUtil.hset(sortKey, "sortType", sortType);
+        redisUtil.hset(sortKey, "sortOrder", sortOrder);
+    }
+
     private void recurToCountPath(Data data, List<DataPathDto> result) {
         if (data.getParentDataId() == DataEnum.ZERO_FOLDER.getIndex()) {
             result.add(new DataPathDto(0, "/"));
@@ -313,7 +405,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         recurCountDelete(dataId);
         DataDel dataDel = dataDelService.insertDataDel(dataId, userId);
         //延迟队列,过期之后交给死信队列,然后监听死信队列进行消费操作
-        rabbitTemplate.convertAndSend("del_exchange","del.finalDelData",dataDel.getId());
+        rabbitTemplate.convertAndSend("del_exchange", "del.finalDelData", dataDel.getId());
     }
 
     /**
@@ -351,7 +443,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                     this.removeById(dataId);
                     recurCountDelete(dataId);
                     DataDel dataDel = dataDelService.insertDataDel(dataId, userId);
-                    rabbitTemplate.convertAndSend("del_exchange","del.finalDelData",dataDel.getId());
+                    rabbitTemplate.convertAndSend("del_exchange", "del.finalDelData", dataDel.getId());
                 } finally {
                     countDownLatch.countDown();
                 }
@@ -396,6 +488,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         dataMapper.finalDelData(dataId);
         recurCountFinalDelete(data);
         dataDelService.removeById(dataDelId);
+        shareMapper.deleteByDataId(dataId);
     }
 
     /**
@@ -495,9 +588,8 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         return this.getById(dataId);
     }
 
-    volatile int index=0;
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public List<List<Data>> copyToNewFolder(List<Integer> dataIds, Integer targetFolderDataId) {
         Integer userId = UserUtil.getLoginUserId();
         if (dataIds.size() == Integer.MAX_VALUE) {
@@ -505,21 +597,18 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         }
         Data targetFolder = dataMapper.selectOne(new QueryWrapper<Data>()
                 .eq("id", targetFolderDataId).eq("create_by", userId));
-        //判断目标文件夹是否存在,判断完之后targetFolder必须是文件夹类型
-//        if ((targetFolderDataId != DataEnum.ZERO_FOLDER.getIndex() && Objects.isNull(targetFolder))
-//                || (!Objects.isNull(targetFolder) && targetFolder.getType() != DataEnum.FOLDER.getIndex())) {
-//            throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
-//        }
+        // 判断目标文件夹是否存在,判断完之后targetFolder必须是文件夹类型
+        if ((targetFolderDataId != DataEnum.ZERO_FOLDER.getIndex() && Objects.isNull(targetFolder))
+                || (!Objects.isNull(targetFolder) && targetFolder.getType() != DataEnum.FOLDER.getIndex())) {
+            throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
+        }
         List<Data> targetDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
                 .eq("parent_data_id", targetFolderDataId).eq("create_by", userId));
         //分别定义 返回结果集、重名的文件、重名的原文件、查找目标文件下所有子文件,用于查重名
         List<List<Data>> result = new ArrayList<>();
         List<Data> reNameList = new CopyOnWriteArrayList<>();
         List<Data> sourceList = new CopyOnWriteArrayList<>();
-        int nowIndex=0;
-        index=1;
         CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
-
         //开始复制操作
         for (int copyDataId : dataIds) {
             Data copyData = dataMapper.selectOne(new QueryWrapper<Data>()
@@ -528,12 +617,12 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 countDownLatch.countDown();
                 continue;
             }
-//            //判断复制的时候是不是复制复制到原来的文件夹或错误的复制
-//            if (targetFolderDataId != 0 && (copyData.getParentDataId().equals(targetFolderDataId)
-//                    && copyData.getCreateBy().equals(targetFolder.getCreateBy()))
-//                    || copyDataId == targetFolderDataId) {
-//                throw new AppException(AppExceptionCodeMsg.DATA_COPY_ERR);
-//            }
+            //判断复制的时候是不是复制复制到原来的文件夹或错误的复制
+            if (copyData.getParentDataId().equals(targetFolderDataId)
+                    && copyData.getCreateBy().equals(targetFolder.getCreateBy())
+                    || copyDataId == targetFolderDataId) {
+                throw new AppException(AppExceptionCodeMsg.DATA_COPY_ERR);
+            }
             nowServiceThreadPool.execute(() -> {
                 try {
                     boolean shouldContinue = false;
@@ -589,6 +678,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             for (Data copyDataSubData : copyDataSubDataList) {
                 copyDataSubData.setParentDataId(copedId);
                 copyDataSubData.setCreateBy(userId);
+                copyDataSubData.setCreateTime(new Date());
             }
             dataMapper.batchSaveData(copyDataSubDataList);
             List<Data> getSaveList = this.list(new QueryWrapper<Data>()
@@ -599,19 +689,16 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             for (int i = 0; i < getSaveList.size(); i++) {
                 int copyDataIndex = i;
                 int getSaveIndex = i;
-                CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(()->{
+                CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() -> {
                     recurToCopy(sourceCopyDataList.get(copyDataIndex), userId, getSaveList.get(getSaveIndex).getId());
-                    log.info("进入子线程: "+getSaveList.get(getSaveIndex).getId());
                 });
                 futures.add(voidCompletableFuture);
             }
-
-            log.info("循环结束");
             // 等待所有 CompletableFuture 完成
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-            log.info("等待完毕");
         } else {
-            log.info("生成文件 "+ copyData.getFileId());
+            System.out.println("添加MD5" +
+                    "数值+1");
             rabbitTemplate.convertAndSend(RabbitmqConstants.FILE_EXCHANGE,
                     RabbitmqConstants.BIND_ADD_FILE_MD5, copyData.getFileId());
         }
@@ -631,22 +718,24 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         if (dataIds.size() == Integer.MAX_VALUE) {
             throw new AppException(AppExceptionCodeMsg.DATA_NUM_TOO_LARGE);
         }
+
+        List<Data> targetDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
+                .eq("parent_data_id", targetFolderDataId)
+                .eq("create_by", userId));
         //重名的文件
         List<Data> reNameList = new CopyOnWriteArrayList<>();
         //原来的文件
         List<Data> sourceList = new CopyOnWriteArrayList<>();
-        List<Data> targetDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
-                .eq("parent_data_id", targetFolderDataId)
-                .eq("create_by", userId));
         List<List<Data>> result = new ArrayList<>();
         CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
+
         for (int shearDataId : dataIds) {
             Data shearData = this.getById(shearDataId);
             if (Objects.isNull(shearData)) {
                 countDownLatch.countDown();
                 continue;
             }
-            if (shearData.getParentDataId().equals(targetFolderDataId)) {
+            if (shearData.getParentDataId().equals(targetFolderDataId) || shearDataId == targetFolderDataId) {
                 throw new AppException(AppExceptionCodeMsg.DATA_SHEAR_ERR);
             }
             nowServiceThreadPool.execute(() -> {
@@ -685,19 +774,23 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     }
 
     @Override
-    @Transactional
-    public void batchOverrideFiles(List<Integer> dataIds, Integer targetFolderDataId, List<Integer> sourceDataIds) {
+    public void batchOverrideFiles(List<Integer> dataIds, Integer targetFolderDataId,
+                                   List<Integer> sourceDataIds, Integer status) throws InterruptedException {
         Integer userId = UserUtil.getLoginUserId();
         CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
+        Data targetFolder = this.getById(targetFolderDataId);
+        if (Objects.isNull(targetFolder)) {
+            throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
+        }
         for (int dataId : sourceDataIds) {
             nowServiceThreadPool.execute(() -> {
                 try {
                     Data data = this.getById(dataId);
-                    if (Objects.isNull(data) || !data.getCreateBy().equals(userId)) {
+                    if (Objects.isNull(data)) {
                         return;
                     }
                     dataMapper.finalDeleteData(dataId);
-                    recurCountFinalDelete(dataId);
+                    recurFinalDeleteOverride(data);
                 } finally {
                     countDownLatch.countDown();
                 }
@@ -708,26 +801,45 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        copyToNewFolder(dataIds, targetFolderDataId);
-
+//        switch (status) {
+//            case 1:
+//                copyToNewFolder(dataIds, targetFolderDataId);
+//                break;
+//            case 2:
+//                shearToNewFolder(dataIds, targetFolderDataId);
+//                break;
+//            case 3:
+//                restoreData(dataIds);
+//                break;
+//            case 4:
+//                dataShareService.saveToMyResource(dataIds, 1, targetFolderDataId, "code");
+//                break;
+//            default:
+//                throw new AppException(AppExceptionCodeMsg.BUSY);
+//        }
     }
 
     /**
-     * 递归直接删除文件
+     * 递归删除回收站文件
      *
-     * @param dataId 文件id
+     * @param data 文件
      */
-    private void recurCountFinalDelete(Integer dataId) {
-        List<Data> dataList = this.list(new QueryWrapper<Data>().eq("parent_data_id", dataId));
-        dataMapper.batchFinalDelData(dataId);
-        List<CompletableFuture<Void>> futures = new ArrayList<>();
-        for (Data data : dataList) {
-            if (data.getType() == DataEnum.FOLDER.getIndex()) {
-                CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(
-                        () -> recurCountFinalDelete(data.getId()));
-                futures.add(voidCompletableFuture);
+    public void recurFinalDeleteOverride(Data data) {
+        if (data.getType() != DataEnum.FOLDER.getIndex()) {
+            File file = fileMapper.selectById(data.getFileId());
+            if (!Objects.isNull(file)) {
+                redisUtil.hdecr(RedisConstants.FILE_KEY + file.getMd5(), "useNum", 1);
             }
         }
+        List<Data> dataList = dataMapper.selectList(new QueryWrapper<Data>().eq("parent_data_id", data.getId()));
+        List<CompletableFuture<Void>> futures = new ArrayList<>();
+        for (Data subData : dataList) {
+            CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() -> {
+                recurFinalDeleteOverride(subData);
+            });
+            futures.add(voidCompletableFuture);
+        }
+        dataMapper.finalDeleteData(data.getId());
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
@@ -777,6 +889,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     @Override
     public void addToQuickAccess(List<Integer> dataIds) {
 
+
     }
 
     @Override
@@ -825,7 +938,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
      * 递归计算所有文件大小
      *
      * @param dataId             文件id
-     * @param recurCountSizeInfo RecurCountSizeInfo
+     * @param recurCountSizeInfo RecurCountSizeInfo-
      */
     public void recurCountSize(Integer dataId, RecurCountSizeInfo recurCountSizeInfo) {
         List<Data> dataList = this.list(new QueryWrapper<Data>().eq("parent_data_id", dataId));
@@ -877,7 +990,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
      * 将文件存储redis里面
      *
      * @param md5      String 计算出来的文件MD5值
-     * @param fileId   Integer 真实文件id
+     * @param fileId   Integer 真实文件id-
      * @param fileSize long 真实文件大小
      */
     public void redisStorageFile(String md5, Integer fileId, long fileSize) {
@@ -903,7 +1016,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     }
 
     /**
-     * 判断是否重名并返回修改后的名字
+     * 判断是否重名并返回修改后的名字+
      *
      * @param name         名字
      * @param parentDataId 父文件id
@@ -958,7 +1071,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     }
 
 
-    public boolean judgeNowFolderIsSourceData(Integer nowFolderId,Integer sourceDataId){
+    public boolean judgeNowFolderIsSourceData(Integer nowFolderId, Integer sourceDataId) {
         return false;
     }
 
@@ -973,9 +1086,4 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             super.finalize();
         }
     }
-
 }
-
-
-
-

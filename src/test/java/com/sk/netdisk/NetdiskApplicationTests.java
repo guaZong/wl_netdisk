@@ -21,6 +21,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -43,19 +45,19 @@ class NetdiskApplicationTests {
 //        for (int i = 0; i < 100; i++) {
 //            executor.submit(task);
 //        }
-        new Thread(()->{
+        new Thread(() -> {
             System.out.println(redisIdWorker.nextId("sjGoods"));
         }).start();
 
-        new Thread(()->{
+        new Thread(() -> {
             System.out.println(redisIdWorker.nextId("sjGoods"));
         }).start();
 
-        new Thread(()->{
+        new Thread(() -> {
             System.out.println(redisIdWorker.nextId("sjGoods"));
         }).start();
 
-        new Thread(()->{
+        new Thread(() -> {
             System.out.println(redisIdWorker.nextId("sjGoods"));
         }).start();
         Thread.sleep(5000);
@@ -75,7 +77,7 @@ class NetdiskApplicationTests {
     @Test
     public void testpro() throws Exception {
 
-        rabbitTemplate.convertAndSend("test1_exchange","","haha");
+        rabbitTemplate.convertAndSend("test1_exchange", "", "haha");
     }
 
     @Autowired
@@ -83,10 +85,11 @@ class NetdiskApplicationTests {
 
     @Autowired
     RabbitMQConfig rabbitMQConfig;
+
     @Test
     public void testConfirm() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
-        rabbitTemplate.convertAndSend("test1_exchange","bind", "66666");
+        rabbitTemplate.convertAndSend("test1_exchange", "bind", "66666");
         rabbitTemplate.setConfirmCallback(new RabbitTemplate.ConfirmCallback() {
             /**
              * confirm方法
@@ -97,9 +100,9 @@ class NetdiskApplicationTests {
             @Override
             public void confirm(CorrelationData correlationData, boolean ack, String cause) {
                 System.out.println("发送方法被执行了,不知道返回的结果是啥");
-                System.out.println("发送是否成功呢+ "+ack);
-                if(!ack){
-                    System.out.println("失败原因: "+cause);
+                System.out.println("发送是否成功呢+ " + ack);
+                if (!ack) {
+                    System.out.println("失败原因: " + cause);
                 }
                 latch.countDown();
             }
@@ -120,11 +123,11 @@ class NetdiskApplicationTests {
      * 1.开启回退模式
      * 2. 设置returncallback
      * 3.设置exchange处理消息模式
-     *      1.如果没有消息路由到queue,那么默认丢消息
-     *      2.如果没有路由到queue,将消息给发送方returncallback
+     * 1.如果没有消息路由到queue,那么默认丢消息
+     * 2.如果没有路由到queue,将消息给发送方returncallback
      */
     @Test
-    public void testReturn(){
+    public void testReturn() {
         rabbitTemplate.setReturnCallback(new RabbitTemplate.ReturnCallback() {
             @Override
             public void returnedMessage(Message message, int replyCode, String replyText, String exchange, String toutingKey) {
@@ -136,7 +139,7 @@ class NetdiskApplicationTests {
             }
         });
 
-        rabbitTemplate.convertAndSend("test1_exchange","bind", "66666");
+        rabbitTemplate.convertAndSend("test1_exchange", "bind", "66666");
     }
 
 
@@ -152,9 +155,13 @@ class NetdiskApplicationTests {
     @Autowired
     DataMapper dataMapper;
 
+    @Test
+    public void test5() {
+        List<Integer> dataIds=new ArrayList<>();
+        dataIds.add(51548);
+        System.out.println(dataMapper.findDataByIds(dataIds));
 
-
-
+    }
 
 
 }

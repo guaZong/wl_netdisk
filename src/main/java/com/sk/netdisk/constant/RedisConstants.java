@@ -51,6 +51,11 @@ public class RedisConstants {
      */
     public static final String USER_STORAGE ="storage:";
 
+    /**
+     * 文件排序 redis key
+     */
+    public static final String SORT_KEY="netdisk:sort";
+
 
 
 }

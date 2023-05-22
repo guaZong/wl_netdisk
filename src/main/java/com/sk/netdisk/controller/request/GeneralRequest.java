@@ -33,6 +33,10 @@ public class GeneralRequest {
 
     private String link;
 
+    private Integer sortType;
+
+    private Integer sortOrder;
+
 
 
 }

@@ -54,4 +54,10 @@
         where id = #{shareId}
           and is_delete = 0
     </select>
+
+    <delete id="deleteById">
+        delete
+        from data_share
+        where id = #{shareId}
+    </delete>
 </mapper>

@@ -76,7 +76,7 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
 
     @Override
     @Transactional
-    public DataShare createShareFile(List<Integer> dataIds,String passCode,
+    public DataShare createShareFile(List<Integer> dataIds, String passCode,
                                      Integer accessNum, Integer accessStatus, Integer expireDays) {
         Integer userId = UserUtil.getLoginUserId();
         List<Data> dataList = dataMapper.selectBatchIds(dataIds);
@@ -95,7 +95,7 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         passCode = StringUtils.isEmpty(passCode) ? "" : passCode;
         String randomKey = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789-";
         String uuid = RandomUtil.randomString(randomKey, 25);
-        String link=domainName+"sysShare/"+uuid;
+        String link = domainName + "sysShare/" + uuid;
         DataShare dataShare;
         if (accessStatus == DataEnum.SHARE_IS_LIMIT.getIndex()) {
             if (Objects.isNull(accessNum) || accessNum == 0) {
@@ -113,8 +113,8 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         for (Share share : shareList) {
             share.setShareId(dataShare.getId());
         }
-        if(shareList.isEmpty()){
-           throw new AppException(AppExceptionCodeMsg.BUSY);
+        if (shareList.isEmpty()) {
+            throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         shareMapper.batchSaveShare(shareList);
         nowServiceThreadPool.execute(() -> {
@@ -142,7 +142,8 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
             //todo 如果expireDays不是-1就删除延迟队列里的数据
         }
         shareMapper.deleteByShareId(shareId);
-        this.removeById(shareId);
+        redisUtil.del(RedisConstants.SHARE_KEY + shareId);
+        dataShareMapper.deleteById(shareId);
     }
 
     @Override
@@ -237,28 +238,28 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
     }
 
     @Override
-    public List<Integer> getShareData(String uuid,String passCode) {
+    public List<DataDetInfoDto> getShareData(String uuid, String passCode) {
         DataShare dataShare = this.getOne(new QueryWrapper<DataShare>().eq("link", uuid));
-        if(Objects.isNull(dataShare) || dataShare.getAccessStatus()==DataEnum.SHARE_IS_EXPIRE.getIndex()){
+        if (Objects.isNull(dataShare) || dataShare.getAccessStatus() == DataEnum.SHARE_IS_EXPIRE.getIndex()) {
             throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
         }
-        if(dataShare.getAccessStatus()==DataEnum.SHARE_IS_DELETE.getIndex()){
+        if (dataShare.getAccessStatus() == DataEnum.SHARE_IS_DELETE.getIndex()) {
             throw new AppException(AppExceptionCodeMsg.SHARE_IS_DELETE);
         }
-        if(!StringUtils.isEmpty(dataShare.getPassCode()) && !dataShare.getPassCode().equals(passCode)){
+        if (!StringUtils.isEmpty(dataShare.getPassCode()) && !dataShare.getPassCode().equals(passCode)) {
             throw new AppException(AppExceptionCodeMsg.PASSCODE_INVALID);
         }
         List<Integer> dataIds = shareMapper.selectIdsByShareId(dataShare.getId());
-        if(dataIds.isEmpty()){
+        if (dataIds.isEmpty()) {
             throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
         }
-        return dataIds;
+        redisUtil.hincr(RedisConstants.SHARE_KEY + dataShare.getId(), "lookNum", 1);
+        return dataMapper.findDataByIds(dataIds);
     }
 
     @Override
-    public List<DataDetInfoDto> infoShareData(Integer parentDataId) {
-
-        return  dataMapper.visitorInfoData(parentDataId);
+    public List<DataDetInfoDto> infoShareData(Integer parentDataId, String passCode, Integer shareId) {
+        return dataMapper.visitorInfoData(parentDataId);
     }
 
 
