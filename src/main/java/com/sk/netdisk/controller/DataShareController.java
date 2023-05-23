@@ -10,6 +10,7 @@ import com.sk.netdisk.service.DataShareService;
 import com.sk.netdisk.util.ResponseResult;
 import com.sk.netdisk.util.UserUtil;
 import io.swagger.annotations.ApiOperation;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -44,6 +45,9 @@ public class DataShareController {
         Integer expireDays = dataShare.getExpireDays();
         if (ids.isEmpty() || Objects.isNull(accessStatus) || Objects.isNull(expireDays)) {
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
+        }
+        if (!StringUtils.isEmpty(passCode) && passCode.length() != 4) {
+            throw new AppException(AppExceptionCodeMsg.PASSCODE_LENGTH_INVALID);
         }
         List<Integer> dataIds = new ArrayList<>(ids);
         DataShare shareFile = dataShareService.createShareFile(dataIds, passCode, accessNum, accessStatus, expireDays);
@@ -93,11 +97,8 @@ public class DataShareController {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         List<Integer> dataIds = new ArrayList<>(ids);
-        List<List<Data>> result = dataShareService.saveToMyResource(dataIds, shareId, targetFolderId, code);
-        if (result.get(0).isEmpty()) {
-            return ResponseResult.success();
-        }
-        return ResponseResult.error(AppExceptionCodeMsg.DATA_RENAME, result);
+        dataShareService.saveToMyResource(dataIds, shareId, targetFolderId, code);
+        return ResponseResult.success();
     }
 
 

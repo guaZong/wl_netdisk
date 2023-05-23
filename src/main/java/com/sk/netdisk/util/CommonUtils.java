@@ -11,6 +11,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * 平常工具类
@@ -87,5 +90,30 @@ public class CommonUtils {
             return String.format("%.2f MB", sizeInMb);
         }
         return String.format("%.2f GB", sizeInGb);
+    }
+
+    /**
+     * 查询是否重名并重命名为  file(x) x为数字
+     *
+     * @param fileName      文件名字
+     * @param existingNames 要查询的文件名字集合
+     * @return String
+     */
+    public static String renameFile(String fileName, List<String> existingNames) {
+        Set<String> existingSet = new HashSet<>(existingNames);
+        String newFileName = fileName;
+        int counter = 1;
+        while (existingSet.contains(newFileName)) {
+            int dotIndex = fileName.lastIndexOf(".");
+            String baseName = (dotIndex != -1) ? fileName.substring(0, dotIndex) : fileName;
+            String extension = (dotIndex != -1) ? fileName.substring(dotIndex) : "";
+            String candidateName = baseName + "(" + counter + ")" + extension;
+            if (existingSet.contains(candidateName)) {
+                counter++;
+            } else {
+                newFileName = candidateName;
+            }
+        }
+        return newFileName;
     }
 }

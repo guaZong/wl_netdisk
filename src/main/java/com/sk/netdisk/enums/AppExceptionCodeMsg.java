@@ -41,6 +41,7 @@ public enum AppExceptionCodeMsg {
     PASSCODE_INVALID(12010,"提取码错误"),
     SHARE_INVALID(12011,"分享已取消"),
     SHARE_IS_DELETE(12012,"文件已被删除"),
+    PASSCODE_LENGTH_INVALID(12013,"提取码格式错误"),
     ;
 
 

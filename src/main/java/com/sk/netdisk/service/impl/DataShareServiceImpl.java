@@ -5,6 +5,7 @@ import java.util.*;
 import cn.hutool.core.thread.NamedThreadFactory;
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
 import com.sk.netdisk.constant.RedisConstants;
@@ -14,15 +15,15 @@ import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.DataShareMapper;
 import com.sk.netdisk.mapper.ShareMapper;
-import com.sk.netdisk.pojo.Data;
-import com.sk.netdisk.pojo.DataShare;
-import com.sk.netdisk.pojo.Share;
+import com.sk.netdisk.pojo.*;
 import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.pojo.dto.ShareInfoDto;
 import com.sk.netdisk.service.DataService;
 import com.sk.netdisk.service.DataShareService;
+import com.sk.netdisk.util.CommonUtils;
 import com.sk.netdisk.util.Redis.RedisUtil;
 import com.sk.netdisk.util.UserUtil;
+import com.sun.istack.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -56,17 +57,20 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
 
     final private DataService dataService;
 
+    final private DataServiceImpl dataServiceImpl;
+
     @Value("${domainName}")
     private String domainName;
 
 
     @Autowired
     public DataShareServiceImpl(DataMapper dataMapper, RedisUtil redisUtil, RedisTemplate redisTemplate,
-                                DataShareMapper dataShareMapper, ShareMapper shareMapper, DataService dataService) {
+                                DataShareMapper dataShareMapper, ShareMapper shareMapper, DataService dataService, DataServiceImpl dataServiceImpl) {
         this.redisTemplate = redisTemplate;
         this.dataShareMapper = dataShareMapper;
         this.shareMapper = shareMapper;
         this.dataService = dataService;
+        this.dataServiceImpl = dataServiceImpl;
         ThreadFactory namedThreadFactory = new NamedThreadFactory("DateShareServiceImpl", false);
         nowServiceThreadPool = new ThreadPoolExecutor(24, 24, 0,
                 TimeUnit.SECONDS, new LinkedBlockingDeque<>(), namedThreadFactory);
@@ -208,7 +212,7 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
 
     @Override
     @Transactional
-    public List<List<Data>> saveToMyResource(List<Integer> dataIds, Integer shareId, Integer targetFolderId, String code) {
+    public void saveToMyResource(List<Integer> dataIds, Integer shareId, Integer targetFolderId, String code) {
         Integer userId = UserUtil.getLoginUserId();
         DataShare dataShare = dataShareMapper.selectById(shareId);
         if (Objects.isNull(dataShare)) {
@@ -230,11 +234,32 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         }
         List<List<Data>> result = dataService.copyToNewFolder(dataIds, targetFolderId);
         if (result.get(0).isEmpty()) {
-            //保存人数+1
             redisUtil.hincr(redisKey, "saveNum", 1);
+            return;
         }
-        //保存操作
-        return result;
+        //如果出现重名情况，首先获取result重名的文件
+        List<Data> reNameDataList = result.get(0);
+        List<String> nameList = dataMapper.findNameByParentDataId(targetFolderId, userId);
+        CountDownLatch countDownLatch = new CountDownLatch(reNameDataList.size());
+        for (Data renameData : reNameDataList) {
+            nowServiceThreadPool.execute(() -> {
+                try {
+                    renameData.setName(CommonUtils.renameFile(renameData.getName(), nameList));
+                    Data newData = new Data(renameData.getName(), renameData.getType(), targetFolderId,
+                            renameData.getCreateTime(), renameData.getUpdateTime(), userId, renameData.getFileId());
+                    dataMapper.insert(newData);
+                    dataServiceImpl.recurToCopy(renameData, userId, newData.getId());
+                } finally {
+                    countDownLatch.countDown();
+                }
+            });
+        }
+        try {
+            countDownLatch.await();
+            redisUtil.hincr(redisKey, "saveNum", 1);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -253,13 +278,28 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         if (dataIds.isEmpty()) {
             throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
         }
+        List<DataDetInfoDto> dataList = dataMapper.findDataByIds(dataIds);
+        if (dataList.isEmpty()) {
+            this.update(new DataShare(), new UpdateWrapper<DataShare>()
+                    .set("access_status", DataEnum.SHARE_IS_DELETE.getIndex()).eq("id", dataShare.getId()));
+            throw new AppException(AppExceptionCodeMsg.SHARE_IS_DELETE);
+        }
         redisUtil.hincr(RedisConstants.SHARE_KEY + dataShare.getId(), "lookNum", 1);
-        return dataMapper.findDataByIds(dataIds);
+        return dataList;
     }
 
     @Override
     public List<DataDetInfoDto> infoShareData(Integer parentDataId, String passCode, Integer shareId) {
         return dataMapper.visitorInfoData(parentDataId);
+    }
+
+    @Override
+    public Integer findIdByUidAndCode(String uuid, String passCode) {
+        DataShare dataShare = this.getOne(new QueryWrapper<DataShare>().eq("link", uuid));
+        if (Objects.isNull(dataShare)) {
+            throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
+        }
+        return dataShare.getId();
     }
 
 

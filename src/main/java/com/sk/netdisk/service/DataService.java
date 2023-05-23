@@ -59,12 +59,6 @@ public interface DataService extends IService<Data> {
      */
     List<Data> getDataFolder(Integer folderId);
 
-    /**
-     * 遍历快捷访问
-     *
-     * @return List<Data>
-     */
-    List<Data> traverseQuickAccess();
 
     /**
      * 获取文件路径
@@ -114,31 +108,7 @@ public interface DataService extends IService<Data> {
      */
     void batchDelData(List<Integer> dataIds);
 
-    /**
-     * 删除回收站文件-彻底删除
-     *
-     * @param dataDelId 回收站文件id
-     * @param code      验证码
-     * @param result    判断结果->是否需要验证码
-     */
-    void finalDelData(Integer dataDelId, @Nullable String code, Integer result);
 
-    /**
-     * 批量删除回收站文件
-     *
-     * @param dataDelIds List<Integer> 回收站文件id集合
-     * @param code       验证码
-     * @param result     判断结果->是否需要验证码
-     */
-    void batchFinalDelData(List<Integer> dataDelIds, @Nullable String code, Integer result);
-
-
-    /**
-     * 判断是否发送验证码
-     *
-     * @return Integer
-     */
-    Integer judgeSendDelCode();
 
     /**
      * 修改文件名字
@@ -189,13 +159,6 @@ public interface DataService extends IService<Data> {
      * @throws InterruptedException InterruptedException
      */
     void batchGenerateDuplicates(List<Integer> ids, Integer newDataId) throws InterruptedException;
-
-    /**
-     * 添加文件到快捷访问
-     *
-     * @param dataIds 文件id集合
-     */
-    void addToQuickAccess(List<Integer>  dataIds);
 
     /**
      * 还原回收站的文件

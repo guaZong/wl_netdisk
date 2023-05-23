@@ -12,6 +12,7 @@ import com.sk.netdisk.pojo.DataDel;
 import com.sk.netdisk.pojo.vo.RabbitCodeVO;
 import com.sk.netdisk.service.DataDelService;
 import com.sk.netdisk.service.DataService;
+import com.sk.netdisk.service.impl.DataDelServiceImpl;
 import com.sk.netdisk.service.impl.DataServiceImpl;
 import com.sk.netdisk.util.EmailUtils;
 import com.sk.netdisk.util.Redis.RedisUtil;
@@ -46,7 +47,7 @@ public class RabbitListenerMethods {
 
     FileMapper fileMapper;
 
-    DataDelService dataDelService;
+    DataDelServiceImpl dataDelService;
 
     DataDelMapper dataDelMapper;
 
@@ -56,7 +57,7 @@ public class RabbitListenerMethods {
 
     @Autowired
     public RabbitListenerMethods(SendSmsUtil sendSmsUtil, EmailUtils emailUtils, RedisUtil redisUtil,
-                                 FileMapper fileMapper, DataDelService dataDelService, DataDelMapper dataDelMapper,
+                                 FileMapper fileMapper, DataDelServiceImpl dataDelService, DataDelMapper dataDelMapper,
                                  DataServiceImpl dataService, DataMapper dataMapper) {
         this.sendSmsUtil = sendSmsUtil;
         this.emailUtils = emailUtils;
@@ -148,7 +149,7 @@ public class RabbitListenerMethods {
                     return;
                 }
                 dataMapper.finalDelData(dataId);
-                dataService.recurCountFinalDelete(data);
+                dataDelService.recurCountFinalDelete(data);
                 dataDelService.removeById(dataDelId);
             }
         }catch (Exception e){

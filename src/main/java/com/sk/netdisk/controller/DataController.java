@@ -10,6 +10,7 @@ import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.pojo.dto.DataPathDto;
 import com.sk.netdisk.pojo.vo.DataDelInfoVo;
 import com.sk.netdisk.pojo.vo.DataInfoVo;
+import com.sk.netdisk.service.DataDelService;
 import com.sk.netdisk.service.DataService;
 import com.sk.netdisk.util.ResponseResult;
 import io.swagger.annotations.ApiOperation;
@@ -32,10 +33,12 @@ import java.util.Set;
 public class DataController {
 
     DataService dataService;
+    DataDelService dataDelService;
 
     @Autowired
-    public DataController(DataService dataService) {
+    public DataController(DataService dataService, DataDelService dataDelService) {
         this.dataService = dataService;
+        this.dataDelService = dataDelService;
     }
 
     @ApiOperation(value = "遍历文件")
@@ -148,12 +151,12 @@ public class DataController {
         if (Objects.isNull(dataDelId)) {
             throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
         }
-        Integer result = dataService.judgeSendDelCode();
+        Integer result = dataDelService.judgeSendDelCode();
         if (result != DataEnum.ACCESS_TO_FINAL_DEL.getIndex() && StringUtils.isEmpty(code)) {
             return ResponseResult.success(result);
         }
         code = Objects.isNull(code) ? "" : code;
-        dataService.finalDelData(dataDelId, code, result);
+        dataDelService.finalDelData(dataDelId, code, result);
         return ResponseResult.success();
     }
 
@@ -219,18 +222,6 @@ public class DataController {
         return ResponseResult.success();
     }
 
-    @ApiOperation(value = "添加文件到快捷访问")
-    @PostMapping("/addToQuickAccess")
-    public ResponseResult addToQuickAccess(@RequestBody GeneralRequest generalRequest) {
-        Set<Integer> ids = generalRequest.getIds();
-        if (ids.isEmpty()) {
-            throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
-        }
-        List<Integer> dataIds = new ArrayList<>(ids);
-        dataService.addToQuickAccess(dataIds);
-        return ResponseResult.success();
-    }
-
 
     @ApiOperation(value = "将回收站文件还原")
     @PostMapping("/restoreData")
@@ -265,23 +256,17 @@ public class DataController {
         if (dataDelIds.isEmpty()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
-        Integer result = dataService.judgeSendDelCode();
+        Integer result = dataDelService.judgeSendDelCode();
         if (result != DataEnum.ACCESS_TO_FINAL_DEL.getIndex() && Objects.isNull(code)) {
             return ResponseResult.success(result);
         }
         code = Objects.isNull(code) ? "" : code;
         List<Integer> ids = new ArrayList<>(dataDelIds);
-        dataService.batchFinalDelData(ids, code, result);
+        dataDelService.batchFinalDelData(ids, code, result);
         return ResponseResult.success();
     }
 
 
-    @ApiOperation(value = "遍历快捷访问")
-    @GetMapping("/traverseQuickAccess")
-    public ResponseResult traverseQuickAccess() {
-        List<Data> dataList = dataService.traverseQuickAccess();
-        return ResponseResult.success();
-    }
 
     @ApiOperation(value = "获取路径")
     @GetMapping("/getDataPath/{dataId}")

@@ -69,4 +69,5 @@ public class DataDetInfoDto {
      */
     private Long bytes;
 
+
 }

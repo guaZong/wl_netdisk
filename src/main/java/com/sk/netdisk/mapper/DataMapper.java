@@ -141,6 +141,14 @@ public interface DataMapper extends BaseMapper<Data> {
      * @return List<DataDetInfoDto>
      */
     List<DataDetInfoDto> visitorInfoData(Integer parentDataId);
+
+    /**
+     * 根据父级id查询子文件名字集合
+     * @param parentDataId parentDataId
+     * @param userId userId
+     * @return List<String>
+     */
+    List<String> findNameByParentDataId(Integer parentDataId,Integer userId);
 }
 
 

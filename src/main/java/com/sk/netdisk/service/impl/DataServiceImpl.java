@@ -120,7 +120,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         Integer sortType = (Integer) redisUtil.hget(sortKey, "sortType");
         Integer sortOrder = (Integer) redisUtil.hget(sortKey, "sortOrder");
         if (Objects.isNull(sortOrder) || Objects.isNull(sortType)) {
-            setSortNum(1, 1);
             return dataList;
         }
         Comparator<DataDetInfoDto> dataNameComparator = getComparator(sortType, sortOrder);
@@ -137,7 +136,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         //默认是升序遍历 esc
         if (sortOrder == DataEnum.SORT_ORDER_DESC.getIndex()) {
             if (sortType == DataEnum.SORT_TYPE_NAME.getIndex()) {
-                dataNameComparator = dataNameComparator.thenComparing((s1,s2)->{
+                dataNameComparator = dataNameComparator.thenComparing((s1, s2) -> {
                     try {
                         int num1 = Integer.parseInt(s1.getName());
                         int num2 = Integer.parseInt(s2.getName());
@@ -160,7 +159,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             }
         } else {
             if (sortType == DataEnum.SORT_TYPE_NAME.getIndex()) {
-                dataNameComparator = dataNameComparator.thenComparing((s1,s2)->{
+                dataNameComparator = dataNameComparator.thenComparing((s1, s2) -> {
                     try {
                         int num1 = Integer.parseInt(s1.getName());
                         int num2 = Integer.parseInt(s2.getName());
@@ -272,10 +271,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 .eq("type", DataEnum.FOLDER.getIndex()));
     }
 
-    @Override
-    public List<Data> traverseQuickAccess() {
-        return null;
-    }
 
     @Override
     public List<DataPathDto> getDataPath(Integer dataId) {
@@ -454,116 +449,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-    }
-
-    @Override
-    @Transactional
-    public void finalDelData(Integer dataDelId, @Nullable String code, Integer result) {
-        Integer userId = UserUtil.getLoginUserId();
-        DataDel dataDel = dataDelService.getById(dataDelId);
-        if (Objects.isNull(dataDel)) {
-            throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
-        }
-        int accessToFinalDelData = DataEnum.ACCESS_TO_FINAL_DEL.getIndex();
-        if ((result != accessToFinalDelData && Objects.isNull(code)) || !dataDel.getCreateBy().equals(userId)) {
-            throw new AppException(AppExceptionCodeMsg.INVALID_PERMISSION);
-        }
-        if (result != accessToFinalDelData && !Objects.equals(code,
-                redisUtil.get(RedisConstants.PHONE_FINAL_DEL_KEY + userMapper.selectById(userId).getUsername()))) {
-            throw new AppException(AppExceptionCodeMsg.INVALID_CODE);
-        }
-        finalDeleteData(dataDelId, dataDel.getDataId(), userId);
-    }
-
-    /**
-     * 删除回收站文件方法
-     *
-     * @param dataDelId 回收站文件id
-     * @param dataId    文件id
-     * @param userId    用户id
-     */
-    private void finalDeleteData(Integer dataDelId, Integer dataId, Integer userId) {
-        redisUtil.set(RedisConstants.FINAL_DEL_KEY + userId, 1, 60 * 60 * 6);
-        Data data = dataMapper.findById(dataId);
-        dataMapper.finalDelData(dataId);
-        recurCountFinalDelete(data);
-        dataDelService.removeById(dataDelId);
-        shareMapper.deleteByDataId(dataId);
-    }
-
-    /**
-     * 递归删除回收站文件
-     *
-     * @param data 文件
-     */
-    public void recurCountFinalDelete(Data data) {
-        if (data.getType() != DataEnum.FOLDER.getIndex()) {
-            File file = fileMapper.selectById(data.getFileId());
-            if (!Objects.isNull(file)) {
-                redisUtil.hdecr(RedisConstants.FILE_KEY + file.getMd5(), "useNum", 1);
-                Object useNum = redisUtil.hget(RedisConstants.FILE_KEY + file.getMd5(), "useNum");
-                if ((int) useNum <= 0) {
-                    ossUtil.removeData(CommonUtils.getObjectName(file.getLink()));
-                    redisUtil.del(RedisConstants.FILE_KEY + file.getMd5());
-                    fileMapper.deleteById(data.getFileId());
-                }
-            }
-        }
-        List<Data> dataList = dataMapper.findDelData(data.getId());
-        for (Data subData : dataList) {
-            recurHelpThreadPool.execute(() -> recurCountFinalDelete(subData));
-        }
-        dataMapper.finalDelData(data.getId());
-    }
-
-    @Override
-    @Transactional
-    public void batchFinalDelData(List<Integer> dataDelIds, @Nullable String code, Integer result) {
-        Integer userId = UserUtil.getLoginUserId();
-        int accessToFinalDelData = DataEnum.ACCESS_TO_FINAL_DEL.getIndex();
-        if (result != accessToFinalDelData && !Objects.equals(code,
-                redisUtil.get(RedisConstants.PHONE_FINAL_DEL_KEY + userMapper.selectById(userId).getUsername()))) {
-            throw new AppException(AppExceptionCodeMsg.INVALID_CODE);
-        }
-        CountDownLatch countDownLatch = new CountDownLatch(dataDelIds.size());
-        for (int dataDelId : dataDelIds) {
-            nowServiceThreadPool.execute(() -> {
-                try {
-                    DataDel dataDel = dataDelService.getById(dataDelId);
-                    if ((result != accessToFinalDelData && Objects.isNull(code))
-                            || (!Objects.isNull(dataDel) && !dataDel.getCreateBy().equals(userId))
-                            || Objects.isNull(dataDel)) {
-                        return;
-                    }
-                    redisUtil.set(RedisConstants.FINAL_DEL_KEY + userId, 1, 60 * 60 * 6);
-                    Data data = dataMapper.findById(dataDel.getDataId());
-                    dataMapper.finalDelData(dataDel.getDataId());
-                    recurCountFinalDelete(data);
-                    dataDelService.removeById(dataDelId);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                } finally {
-                    countDownLatch.countDown();
-                }
-            });
-        }
-        try {
-            countDownLatch.await(1, TimeUnit.MINUTES);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * 判断是否有权限删除回收站文件
-     *
-     * @return Integer 1代表有权限,-1代表无权限
-     */
-    @Override
-    public Integer judgeSendDelCode() {
-        Integer userId = UserUtil.getLoginUserId();
-        Object code = redisUtil.get(RedisConstants.FINAL_DEL_KEY + userId);
-        return code != null ? 1 : -1;
     }
 
 
@@ -869,7 +754,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 countDownLatch.countDown();
                 continue;
             }
-            copyData.setName(renameFile(copyData.getName(), nameList));
+            copyData.setName(CommonUtils.renameFile(copyData.getName(), nameList));
             nowServiceThreadPool.execute(() -> {
                 try {
                     Data newData = new Data(copyData.getName(), copyData.getType(), targetFolderDataId,
@@ -886,11 +771,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         countDownLatch.await();
     }
 
-    @Override
-    public void addToQuickAccess(List<Integer> dataIds) {
-
-
-    }
 
     @Override
     public void restoreData(List<Integer> dataDelIds) {
@@ -1043,31 +923,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             }
         }
         return name;
-    }
-
-    /**
-     * 查询是否重名并重命名为  file(x) x为数字
-     *
-     * @param fileName      文件名字
-     * @param existingNames 要查询的文件名字集合
-     * @return String
-     */
-    public String renameFile(String fileName, List<String> existingNames) {
-        Set<String> existingSet = new HashSet<>(existingNames);
-        String newFileName = fileName;
-        int counter = 1;
-        while (existingSet.contains(newFileName)) {
-            int dotIndex = fileName.lastIndexOf(".");
-            String baseName = (dotIndex != -1) ? fileName.substring(0, dotIndex) : fileName;
-            String extension = (dotIndex != -1) ? fileName.substring(dotIndex) : "";
-            String candidateName = baseName + "(" + counter + ")" + extension;
-            if (existingSet.contains(candidateName)) {
-                counter++;
-            } else {
-                newFileName = candidateName;
-            }
-        }
-        return newFileName;
     }
 
 

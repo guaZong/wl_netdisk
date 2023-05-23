@@ -4,6 +4,7 @@ import com.sk.netdisk.pojo.DataDel;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.sk.netdisk.pojo.vo.DataDelInfoVo;
 import com.sk.netdisk.util.ResponseResult;
+import com.sun.istack.Nullable;
 
 import java.util.List;
 
@@ -42,6 +43,32 @@ public interface DataDelService extends IService<DataDel> {
      * @return List<DataDelInfoVo>
      */
     List<DataDelInfoVo> infoAllDataDel(Integer userId);
+
+    /**
+     * 删除回收站文件-彻底删除
+     *
+     * @param dataDelId 回收站文件id
+     * @param code      验证码
+     * @param result    判断结果->是否需要验证码
+     */
+    void finalDelData(Integer dataDelId, @Nullable String code, Integer result);
+
+    /**
+     * 批量删除回收站文件
+     *
+     * @param dataDelIds List<Integer> 回收站文件id集合
+     * @param code       验证码
+     * @param result     判断结果->是否需要验证码
+     */
+    void batchFinalDelData(List<Integer> dataDelIds, @Nullable String code, Integer result);
+
+
+    /**
+     * 判断是否发送验证码
+     *
+     * @return Integer
+     */
+    Integer judgeSendDelCode();
 
 
 }

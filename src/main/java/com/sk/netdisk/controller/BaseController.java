@@ -130,7 +130,8 @@ public class BaseController {
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }
         List<DataDetInfoDto> dataList = dataShareService.getShareData(link, passCode);
-        return ResponseResult.success(dataList);
+        Integer shareId = dataShareService.findIdByUidAndCode(link, passCode);
+        return ResponseResult.success("操作成功",dataList,shareId);
     }
 
 
@@ -148,6 +149,9 @@ public class BaseController {
         List<DataDetInfoDto> dataList = dataShareService.infoShareData(parentDataId,passCode,shareId);
         return ResponseResult.success(dataList);
     }
+
+
+
 
 
 }
