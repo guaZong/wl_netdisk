@@ -106,4 +106,11 @@ public class Data implements Serializable {
         this.updateTime=updateTime;
         this.createBy = createBy;
     }
+
+    public Data(String name, Integer type, Date createTime, Integer createBy) {
+        this.name = name;
+        this.type = type;
+        this.createTime = createTime;
+        this.createBy = createBy;
+    }
 }

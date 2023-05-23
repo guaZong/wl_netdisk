@@ -149,7 +149,7 @@ public interface DataService extends IService<Data> {
      * @throws InterruptedException InterruptedException
      *
      */
-    void batchOverrideFiles(List<Integer> ids, Integer newDataId, List<Integer> sourceIds,Integer status) throws InterruptedException;
+    void batchOverrideFiles(List<Integer> ids, Integer newDataId, List<Integer> sourceIds,Integer status);
 
     /**
      * 批量生成副本
@@ -167,11 +167,4 @@ public interface DataService extends IService<Data> {
      */
     void restoreData(List<Integer> dataDelIds);
 
-    /**
-     * 根据文件id和code遍历文件
-     * @param parentDataId parentDataId
-     * @param passCode passCode
-     * @return List<DataDetInfoDto>
-     */
-    List<DataDetInfoDto> infoShareData(Integer parentDataId, String passCode);
 }

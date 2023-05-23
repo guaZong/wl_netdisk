@@ -195,7 +195,7 @@ public class DataController {
 
     @ApiOperation(value = "批量覆盖原有文件")
     @PostMapping("/batchOverrideFiles")
-    public ResponseResult batchOverrideFiles(@RequestBody GeneralRequest generalRequest) throws InterruptedException {
+    public ResponseResult batchOverrideFiles(@RequestBody GeneralRequest generalRequest){
         Set<Integer> sourceDataIds = generalRequest.getSids();
         Set<Integer> dataIds = generalRequest.getIds();
         Integer newDataId = generalRequest.getTargetFolderId();

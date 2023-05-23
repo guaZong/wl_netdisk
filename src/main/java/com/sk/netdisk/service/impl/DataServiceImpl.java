@@ -15,8 +15,6 @@ import com.sk.netdisk.enums.DataEnum;
 import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.FileMapper;
-import com.sk.netdisk.mapper.ShareMapper;
-import com.sk.netdisk.mapper.UserMapper;
 import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.DataDel;
 import com.sk.netdisk.pojo.File;
@@ -33,7 +31,6 @@ import com.sk.netdisk.util.Redis.RedisUtil;
 import com.sk.netdisk.util.UserUtil;
 import com.sk.netdisk.util.upload.OSSUtil;
 import com.sk.netdisk.util.upload.UploadUtil;
-import com.sun.istack.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -64,8 +61,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     private final OSSUtil ossUtil;
 
-    private final UserMapper userMapper;
-
     private final FileMapper fileMapper;
 
     private final ExecutorService nowServiceThreadPool;
@@ -74,17 +69,12 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     private final ExecutorService recurHelpThreadPool;
 
-    private final ShareMapper shareMapper;
 
 
     @Autowired
     public DataServiceImpl(DataMapper dataMapper, RedisUtil redisUtil,
                            DataDelService dataDelService, OSSUtil ossUtil,
-                           UserMapper userMapper, FileMapper fileMapper,
-                           RabbitTemplate rabbitTemplate, ShareMapper shareMapper) {
-        this.shareMapper = shareMapper;
-
-
+                           FileMapper fileMapper, RabbitTemplate rabbitTemplate) {
         ThreadFactory namedThreadFactory1 = new NamedThreadFactory("DataServiceImpl", false);
         nowServiceThreadPool = new ThreadPoolExecutor(24, 24, 0,
                 TimeUnit.SECONDS, new LinkedBlockingDeque<>(), namedThreadFactory1);
@@ -96,7 +86,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         this.redisUtil = redisUtil;
         this.dataDelService = dataDelService;
         this.ossUtil = ossUtil;
-        this.userMapper = userMapper;
         this.fileMapper = fileMapper;
         this.rabbitTemplate = rabbitTemplate;
     }
@@ -125,63 +114,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         Comparator<DataDetInfoDto> dataNameComparator = getComparator(sortType, sortOrder);
         dataList.sort(dataNameComparator);
         return dataList;
-
-        //了解comparable和comparator区别,并且了解lambda表达式和stream,把前两天的completableFuture总结一下,多线程事务自己下去写
-    }
-
-    private Comparator<DataDetInfoDto> getComparator(Integer sortType, Integer sortOrder) {
-        //按序遍历，这里要好好学习Comparator的知识
-        Comparator<DataDetInfoDto> dataNameComparator = Comparator
-                .comparing(DataDetInfoDto::getType, Comparator.comparingInt(type -> type == 0 ? 0 : 1));
-        //默认是升序遍历 esc
-        if (sortOrder == DataEnum.SORT_ORDER_DESC.getIndex()) {
-            if (sortType == DataEnum.SORT_TYPE_NAME.getIndex()) {
-                dataNameComparator = dataNameComparator.thenComparing((s1, s2) -> {
-                    try {
-                        int num1 = Integer.parseInt(s1.getName());
-                        int num2 = Integer.parseInt(s2.getName());
-                        return Integer.compare(num2, num1);
-                    } catch (NumberFormatException e) {
-                        // 处理非数字字符串
-                        if (StringUtils.isNumeric(s1.getName()) && !StringUtils.isNumeric(s2.getName())) {
-                            return 1; // s1 是数字，s2 是非数字，将 s2 排在前面
-                        } else if (!StringUtils.isNumeric(s1.getName()) && StringUtils.isNumeric(s2.getName())) {
-                            return -1; // s1 是非数字，s2 是数字，将 s1 排在前面
-                        } else {
-                            return s2.getName().compareTo(s1.getName()); // 都是非数字字符串，按照字符串顺序降序排序
-                        }
-                    }
-                });
-            } else if (sortType == DataEnum.SORT_TYPE_TIME.getIndex()) {
-                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getCreateTime, Comparator.reverseOrder());
-            } else if (sortType == DataEnum.SORT_TYPE_SIZE.getIndex()) {
-                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getBytes, Comparator.nullsLast(Comparator.reverseOrder()));
-            }
-        } else {
-            if (sortType == DataEnum.SORT_TYPE_NAME.getIndex()) {
-                dataNameComparator = dataNameComparator.thenComparing((s1, s2) -> {
-                    try {
-                        int num1 = Integer.parseInt(s1.getName());
-                        int num2 = Integer.parseInt(s2.getName());
-                        return Integer.compare(num1, num2);
-                    } catch (NumberFormatException e) {
-                        // 处理非数字字符串
-                        if (StringUtils.isNumeric(s1.getName()) && !StringUtils.isNumeric(s2.getName())) {
-                            return -1; // s1 是数字，s2 是非数字，将 s1 排在前面
-                        } else if (!StringUtils.isNumeric(s1.getName()) && StringUtils.isNumeric(s2.getName())) {
-                            return 1; // s1 是非数字，s2 是数字，将 s2 排在前面
-                        } else {
-                            return s1.getName().compareTo(s2.getName()); // 都是非数字字符串，按照字符串顺序排序
-                        }
-                    }
-                });
-            } else if (sortType == DataEnum.SORT_TYPE_TIME.getIndex()) {
-                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getCreateTime);
-            } else if (sortType == DataEnum.SORT_TYPE_SIZE.getIndex()) {
-                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getBytes, Comparator.nullsLast(Comparator.naturalOrder()));
-            }
-        }
-        return dataNameComparator;
     }
 
     @Override
@@ -321,13 +253,9 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     @Override
     public Data createFolder(Integer parentDataId, String folderName) {
         Integer userId = UserUtil.getLoginUserId();
-        Data data = new Data();
         int folderType = DataEnum.FOLDER.getIndex();
         String judgeReName = judgeReName(folderName, parentDataId, folderType, userId);
-        data.setName(judgeReName);
-        data.setType(folderType);
-        data.setCreateTime(new Date());
-        data.setCreateBy(userId);
+        Data data = new Data(judgeReName,folderType,new Date(),userId);
         if (parentDataId == DataEnum.ZERO_FOLDER.getIndex()) {
             data.setParentDataId(DataEnum.ZERO_FOLDER.getIndex());
         } else {
@@ -381,7 +309,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             dataMapper.insert(data);
             uploadNum++;
         }
-
         return uploadNum;
     }
 
@@ -432,7 +359,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 try {
                     Data data = this.getById(dataId);
                     if (Objects.isNull(data) || !data.getCreateBy().equals(userId)) {
-                        //在try  ...catch ...finally里面return的话,会先执行finally中的代码,所以这里不需要进行countDownLatch.countdown()
                         return;
                     }
                     this.removeById(dataId);
@@ -582,8 +508,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             // 等待所有 CompletableFuture 完成
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
         } else {
-            System.out.println("添加MD5" +
-                    "数值+1");
             rabbitTemplate.convertAndSend(RabbitmqConstants.FILE_EXCHANGE,
                     RabbitmqConstants.BIND_ADD_FILE_MD5, copyData.getFileId());
         }
@@ -660,7 +584,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     @Override
     public void batchOverrideFiles(List<Integer> dataIds, Integer targetFolderDataId,
-                                   List<Integer> sourceDataIds, Integer status) throws InterruptedException {
+                                   List<Integer> sourceDataIds, Integer status){
         Integer userId = UserUtil.getLoginUserId();
         CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
         Data targetFolder = this.getById(targetFolderDataId);
@@ -719,9 +643,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         List<Data> dataList = dataMapper.selectList(new QueryWrapper<Data>().eq("parent_data_id", data.getId()));
         List<CompletableFuture<Void>> futures = new ArrayList<>();
         for (Data subData : dataList) {
-            CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() -> {
-                recurFinalDeleteOverride(subData);
-            });
+            CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() -> recurFinalDeleteOverride(subData));
             futures.add(voidCompletableFuture);
         }
         dataMapper.finalDeleteData(data.getId());
@@ -786,13 +708,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         }
     }
 
-    @Override
-    public List<DataDetInfoDto> infoShareData(Integer parentDataId, String passCode) {
-
-        return null;
-    }
-
-
     /**
      * 递归还原被删除文件
      *
@@ -846,8 +761,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         Integer userId = UserUtil.getLoginUserId();
         String name = judgeReName(file.getOriginalFilename(), parentDataId, 1, userId);
         int fileType = UploadUtil.getFileType(file);
-
-
         //如果当前目录不为根目录
         if (parentDataId != DataEnum.ZERO_FOLDER.getIndex()) {
             Data parentData = this.getById(parentDataId);
@@ -855,16 +768,9 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 return null;
             }
         }
-
-        Data data = new Data();
-        data.setParentDataId(parentDataId != DataEnum.ZERO_FOLDER.getIndex() ? parentDataId : DataEnum.ZERO_FOLDER.getIndex());
-        data.setName(name);
-        data.setCreateBy(userId);
-        data.setCreateTime(new Date());
-        data.setType(fileType);
-        return data;
+        int fatherId = parentDataId != DataEnum.ZERO_FOLDER.getIndex() ? parentDataId : DataEnum.ZERO_FOLDER.getIndex();
+        return new Data(name,fileType,fatherId,new Date(),null,userId);
     }
-
 
     /**
      * 将文件存储redis里面
@@ -925,11 +831,60 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         return name;
     }
 
-
-    public boolean judgeNowFolderIsSourceData(Integer nowFolderId, Integer sourceDataId) {
-        return false;
+    private Comparator<DataDetInfoDto> getComparator(Integer sortType, Integer sortOrder) {
+        //按序遍历，这里要好好学习Comparator的知识
+        Comparator<DataDetInfoDto> dataNameComparator = Comparator
+                .comparing(DataDetInfoDto::getType, Comparator.comparingInt(type -> type == 0 ? 0 : 1));
+        //默认是升序遍历 esc
+        if (sortOrder == DataEnum.SORT_ORDER_DESC.getIndex()) {
+            if (sortType == DataEnum.SORT_TYPE_NAME.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing((s1, s2) -> {
+                    try {
+                        int num1 = Integer.parseInt(s1.getName());
+                        int num2 = Integer.parseInt(s2.getName());
+                        return Integer.compare(num2, num1);
+                    } catch (NumberFormatException e) {
+                        // 处理非数字字符串
+                        if (StringUtils.isNumeric(s1.getName()) && !StringUtils.isNumeric(s2.getName())) {
+                            return 1; // s1 是数字，s2 是非数字，将 s2 排在前面
+                        } else if (!StringUtils.isNumeric(s1.getName()) && StringUtils.isNumeric(s2.getName())) {
+                            return -1; // s1 是非数字，s2 是数字，将 s1 排在前面
+                        } else {
+                            return s2.getName().compareTo(s1.getName()); // 都是非数字字符串，按照字符串顺序降序排序
+                        }
+                    }
+                });
+            } else if (sortType == DataEnum.SORT_TYPE_TIME.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getCreateTime, Comparator.reverseOrder());
+            } else if (sortType == DataEnum.SORT_TYPE_SIZE.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getBytes, Comparator.nullsLast(Comparator.reverseOrder()));
+            }
+        } else {
+            if (sortType == DataEnum.SORT_TYPE_NAME.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing((s1, s2) -> {
+                    try {
+                        int num1 = Integer.parseInt(s1.getName());
+                        int num2 = Integer.parseInt(s2.getName());
+                        return Integer.compare(num1, num2);
+                    } catch (NumberFormatException e) {
+                        // 处理非数字字符串
+                        if (StringUtils.isNumeric(s1.getName()) && !StringUtils.isNumeric(s2.getName())) {
+                            return -1; // s1 是数字，s2 是非数字，将 s1 排在前面
+                        } else if (!StringUtils.isNumeric(s1.getName()) && StringUtils.isNumeric(s2.getName())) {
+                            return 1; // s1 是非数字，s2 是数字，将 s2 排在前面
+                        } else {
+                            return s1.getName().compareTo(s2.getName()); // 都是非数字字符串，按照字符串顺序排序
+                        }
+                    }
+                });
+            } else if (sortType == DataEnum.SORT_TYPE_TIME.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getCreateTime);
+            } else if (sortType == DataEnum.SORT_TYPE_SIZE.getIndex()) {
+                dataNameComparator = dataNameComparator.thenComparing(DataDetInfoDto::getBytes, Comparator.nullsLast(Comparator.naturalOrder()));
+            }
+        }
+        return dataNameComparator;
     }
-
 
     @Override
     protected void finalize() throws Throwable {

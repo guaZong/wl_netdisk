@@ -274,6 +274,7 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         if (!StringUtils.isEmpty(dataShare.getPassCode()) && !dataShare.getPassCode().equals(passCode)) {
             throw new AppException(AppExceptionCodeMsg.PASSCODE_INVALID);
         }
+
         List<Integer> dataIds = shareMapper.selectIdsByShareId(dataShare.getId());
         if (dataIds.isEmpty()) {
             throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);

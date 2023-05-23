@@ -48,7 +48,6 @@ import java.util.concurrent.*;
 public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         implements UserService {
 
-
     private final PasswordEncoder passwordEncoder;
 
     private final RedisUtil redisUtil;
