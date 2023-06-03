@@ -37,4 +37,8 @@ public class ShareInfoDto {
     private List<String> nameList;
 
     private List<Integer> type;
+
+    private Integer accessNum;
+
+    private Integer accessStatus;
 }

@@ -172,8 +172,8 @@
                d.name,
                d.type,
                d.parent_data_id,
-               DATE_FORMAT(d.create_time, '%Y年%m月%d日 %H:%i') AS create_time,
-               DATE_FORMAT(d.update_time, '%Y年%m月%d日 %H:%i') AS update_time,
+               d.create_time,
+               d.update_time,
                d.create_by,
                f.link,
                f.size
@@ -191,6 +191,32 @@
         where is_delete = 0
           and parent_data_id = #{parentDataId}
           and create_by = ${userId}
+    </select>
+
+
+    <select id="findIdsByParentDataId" resultType="integer">
+        select id
+        from `data`
+        where is_delete = 0
+          and parent_data_id = #{parentDataId}
+    </select>
+
+    <select id="findDataByType" resultType="com.sk.netdisk.pojo.dto.DataDetInfoDto">
+        select d.id,
+               d.name,
+               d.type,
+               d.parent_data_id,
+               d.create_time,
+               d.update_time,
+               d.create_by,
+               f.link,
+               f.size
+        from `data` d
+                 left join `file` f on
+            d.file_id = f.id
+        where is_delete = 0
+          and d.type = #{type}
+          and d.create_by = #{userId}
     </select>
 
 

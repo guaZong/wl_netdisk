@@ -138,11 +138,10 @@ public class DataDelServiceImpl extends ServiceImpl<DataDelMapper, DataDel>
         dataMapper.finalDelData(dataId);
         recurCountFinalDelete(data);
         this.removeById(dataDelId);
-        delOther(dataId);
+        finalDelOther(dataId);
     }
 
-    private void delOther(Integer dataId) {
-        shareMapper.deleteByDataId(dataId);
+    private void finalDelOther(Integer dataId) {
         quickDataMapper.delete(new QueryWrapper<QuickData>().eq("data_id", dataId));
     }
 
@@ -169,7 +168,7 @@ public class DataDelServiceImpl extends ServiceImpl<DataDelMapper, DataDel>
             recurHelpThreadPool.execute(() -> recurCountFinalDelete(subData));
         }
         dataMapper.finalDelData(data.getId());
-        delOther(data.getId());
+        finalDelOther(data.getId());
     }
 
     @Override
@@ -196,7 +195,7 @@ public class DataDelServiceImpl extends ServiceImpl<DataDelMapper, DataDel>
                     dataMapper.finalDelData(dataDel.getDataId());
                     recurCountFinalDelete(data);
                     this.removeById(dataDelId);
-                    delOther(data.getId());
+                    finalDelOther(data.getId());
                 } catch (Exception e) {
                     e.printStackTrace();
                 } finally {

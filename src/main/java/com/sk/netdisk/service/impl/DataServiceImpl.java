@@ -15,16 +15,17 @@ import com.sk.netdisk.enums.DataEnum;
 import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.FileMapper;
-import com.sk.netdisk.pojo.Data;
-import com.sk.netdisk.pojo.DataDel;
-import com.sk.netdisk.pojo.File;
+import com.sk.netdisk.mapper.QuickDataMapper;
+import com.sk.netdisk.mapper.ShareMapper;
+import com.sk.netdisk.pojo.*;
 import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.pojo.dto.DataPathDto;
-import com.sk.netdisk.pojo.vo.DataDelInfoVo;
 import com.sk.netdisk.pojo.vo.DataInfoVo;
 import com.sk.netdisk.pojo.vo.RecurCountSizeInfo;
+import com.sk.netdisk.pojo.vo.Result;
 import com.sk.netdisk.service.DataDelService;
 import com.sk.netdisk.service.DataService;
+import com.sk.netdisk.service.DataShareService;
 import com.sk.netdisk.util.CommonUtils;
 import com.sk.netdisk.constant.RedisConstants;
 import com.sk.netdisk.util.Redis.RedisUtil;
@@ -41,6 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -69,7 +71,11 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     private final ExecutorService recurHelpThreadPool;
 
+    @Autowired
+    DataShareService dataShareService;
 
+    @Autowired
+    ShareMapper shareMapper;
 
     @Autowired
     public DataServiceImpl(DataMapper dataMapper, RedisUtil redisUtil,
@@ -92,7 +98,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
 
     @Override
-    public List<DataDetInfoDto> infoData(Integer parentDataId) {
+    public List<DataDetInfoDto> traverseDataByParentId(Integer parentDataId) {
         Integer userId = UserUtil.getLoginUserId();
         Data data = this.getById(parentDataId);
         if (parentDataId != DataEnum.ZERO_FOLDER.getIndex() && Objects.isNull(data)) {
@@ -117,7 +123,13 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     }
 
     @Override
-    public DataInfoVo getDataInfo(Integer dataId) {
+    public List<DataDetInfoDto> traverseDataByType(Integer type) {
+        Integer userId = UserUtil.getLoginUserId();
+        return dataMapper.findDataByType(type, userId);
+    }
+
+    @Override
+    public DataInfoVo getDataDetail(Integer dataId) {
         if (dataId == DataEnum.ZERO_FOLDER.getIndex()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
@@ -176,17 +188,13 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         }
     }
 
-    @Override
-    public List<DataDelInfoVo> infoDataDel() {
-        Integer userId = UserUtil.getLoginUserId();
-        return dataDelService.infoAllDataDel(userId);
-    }
 
     @Override
     public Integer getParentDataId(Integer nowDataId) {
         if (nowDataId == DataEnum.ZERO_FOLDER.getIndex()) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
+        //todo 增加权限
         Data nowData = this.getById(nowDataId);
         if (Objects.isNull(nowData)) {
             throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
@@ -226,6 +234,37 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     }
 
     @Override
+    public List<DataPathDto> getDataPath(Integer dataId,Integer shareId,String passCode) {
+        DataShare dataShare = dataShareService.getById(shareId);
+        if (Objects.isNull(dataShare)) {
+            throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
+        }
+
+        String sharePassCode = dataShare.getPassCode();
+        if (!StringUtils.isEmpty(sharePassCode) && !sharePassCode.equals(passCode)) {
+            throw new AppException(AppExceptionCodeMsg.PASSCODE_INVALID);
+        }
+        List<DataPathDto> result = new ArrayList<>();
+        if (dataId == DataEnum.ZERO_FOLDER.getIndex()) {
+            result.add(new DataPathDto(0, "/"));
+            return result;
+        }
+        Data data = this.getById(dataId);
+        if (Objects.isNull(data)) {
+            throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
+        }
+        List<Integer> dataIdIdList = shareMapper.selectIdsByShareId(shareId);
+        boolean permission = judgeDataFather(dataId, dataIdIdList);
+        if(!permission){
+            throw new AppException(AppExceptionCodeMsg.INVALID_PERMISSION);
+        }
+        recurToCountPath(data, result);
+        Collections.reverse(result);
+        result.add(new DataPathDto(dataId, data.getName()));
+        return result;
+    }
+
+    @Override
     public void setSortNum(Integer sortType, Integer sortOrder) {
         Integer userId = UserUtil.getLoginUserId();
         if (sortType != DataEnum.SORT_TYPE_NAME.getIndex() && sortType != DataEnum.SORT_TYPE_TIME.getIndex()
@@ -255,7 +294,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         Integer userId = UserUtil.getLoginUserId();
         int folderType = DataEnum.FOLDER.getIndex();
         String judgeReName = judgeReName(folderName, parentDataId, folderType, userId);
-        Data data = new Data(judgeReName,folderType,new Date(),userId);
+        Data data = new Data(judgeReName, folderType, new Date(), userId);
         if (parentDataId == DataEnum.ZERO_FOLDER.getIndex()) {
             data.setParentDataId(DataEnum.ZERO_FOLDER.getIndex());
         } else {
@@ -314,6 +353,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
 
     @Override
+    @Transactional
     public void delData(Integer dataId) {
         Integer userId = UserUtil.getLoginUserId();
         Data data = this.getById(dataId);
@@ -324,11 +364,13 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             throw new AppException(AppExceptionCodeMsg.INVALID_PERMISSION);
         }
         this.removeById(dataId);
+        dataShareService.judgeUpdateDataShare(dataId);
         recurCountDelete(dataId);
         DataDel dataDel = dataDelService.insertDataDel(dataId, userId);
         //延迟队列,过期之后交给死信队列,然后监听死信队列进行消费操作
         rabbitTemplate.convertAndSend("del_exchange", "del.finalDelData", dataDel.getId());
     }
+
 
     /**
      * 递归删除文件
@@ -351,6 +393,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     }
 
     @Override
+    @Transactional
     public void batchDelData(List<Integer> dataIds) {
         Integer userId = UserUtil.getLoginUserId();
         CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
@@ -362,6 +405,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                         return;
                     }
                     this.removeById(dataId);
+                    dataShareService.judgeUpdateDataShare(dataId);
                     recurCountDelete(dataId);
                     DataDel dataDel = dataDelService.insertDataDel(dataId, userId);
                     rabbitTemplate.convertAndSend("del_exchange", "del.finalDelData", dataDel.getId());
@@ -413,6 +457,10 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 || (!Objects.isNull(targetFolder) && targetFolder.getType() != DataEnum.FOLDER.getIndex())) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
+        if (targetFolder == null) {
+            targetFolder = new Data();
+            targetFolder.setCreateBy(userId);
+        }
         List<Data> targetDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
                 .eq("parent_data_id", targetFolderDataId).eq("create_by", userId));
         //分别定义 返回结果集、重名的文件、重名的原文件、查找目标文件下所有子文件,用于查重名
@@ -420,6 +468,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         List<Data> reNameList = new CopyOnWriteArrayList<>();
         List<Data> sourceList = new CopyOnWriteArrayList<>();
         CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
+
         //开始复制操作
         for (int copyDataId : dataIds) {
             Data copyData = dataMapper.selectOne(new QueryWrapper<Data>()
@@ -428,7 +477,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                 countDownLatch.countDown();
                 continue;
             }
-            //判断复制的时候是不是复制复制到原来的文件夹或错误的复制
+            //判断复制的时候是不是复制到原来的文件夹或错误的复制
             if (copyData.getParentDataId().equals(targetFolderDataId)
                     && copyData.getCreateBy().equals(targetFolder.getCreateBy())
                     || copyDataId == targetFolderDataId) {
@@ -500,9 +549,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             for (int i = 0; i < getSaveList.size(); i++) {
                 int copyDataIndex = i;
                 int getSaveIndex = i;
-                CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() -> {
-                    recurToCopy(sourceCopyDataList.get(copyDataIndex), userId, getSaveList.get(getSaveIndex).getId());
-                });
+                CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() -> recurToCopy(sourceCopyDataList.get(copyDataIndex), userId, getSaveList.get(getSaveIndex).getId()));
                 futures.add(voidCompletableFuture);
             }
             // 等待所有 CompletableFuture 完成
@@ -584,7 +631,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     @Override
     public void batchOverrideFiles(List<Integer> dataIds, Integer targetFolderDataId,
-                                   List<Integer> sourceDataIds, Integer status){
+                                   List<Integer> sourceDataIds, Integer status) {
         Integer userId = UserUtil.getLoginUserId();
         CountDownLatch countDownLatch = new CountDownLatch(dataIds.size());
         Data targetFolder = this.getById(targetFolderDataId);
@@ -708,6 +755,20 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         }
     }
 
+    @Override
+    public List<Integer> getSortNum() {
+        Integer userId = UserUtil.getLoginUserId();
+        Object sortType = redisUtil.hget(RedisConstants.SORT_KEY + userId, "sortType");
+        Object sortOrder = redisUtil.hget(RedisConstants.SORT_KEY + userId, "sortOrder");
+        List<Integer> res = new ArrayList<>();
+        if (Objects.isNull(sortType) || Objects.isNull(sortOrder)) {
+            return res;
+        }
+        res.add((Integer) sortType);
+        res.add((Integer) sortOrder);
+        return res;
+    }
+
     /**
      * 递归还原被删除文件
      *
@@ -769,7 +830,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             }
         }
         int fatherId = parentDataId != DataEnum.ZERO_FOLDER.getIndex() ? parentDataId : DataEnum.ZERO_FOLDER.getIndex();
-        return new Data(name,fileType,fatherId,new Date(),null,userId);
+        return new Data(name, fileType, fatherId, new Date(), null, userId);
     }
 
     /**
@@ -884,6 +945,41 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             }
         }
         return dataNameComparator;
+    }
+
+
+    @Override
+    public boolean judgeDataFather(Integer nowDataId, List<Integer> fatherDataIds) {
+        if(fatherDataIds.contains(nowDataId)){
+            return true;
+        }
+        if (nowDataId == DataEnum.ZERO_FOLDER.getIndex()) {
+            return false;
+        }
+        Data data = this.getById(nowDataId);
+        if (data.getParentDataId() == DataEnum.ZERO_FOLDER.getIndex()) {
+            return false;
+        }
+        Result result = new Result(false);
+        recurJudgeDataFather(nowDataId, result, fatherDataIds);
+        return result.isRes();
+    }
+
+
+    private void recurJudgeDataFather(Integer dataId, Result result, List<Integer> fatherDataIds) {
+        if (fatherDataIds.contains(dataId)) {
+            result.setRes(true);
+            return;
+        }
+        List<CompletableFuture> futures = new ArrayList<>();
+        for(Integer fatherDataId:fatherDataIds){
+            CompletableFuture<Void> completableFuture = CompletableFuture.runAsync(() -> {
+                List<Integer> dataIdList = dataMapper.findIdsByParentDataId(fatherDataId);
+                recurJudgeDataFather(dataId, result, dataIdList);
+            });
+            futures.add(completableFuture);
+        }
+        CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
     @Override

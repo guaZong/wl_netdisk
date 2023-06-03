@@ -32,7 +32,9 @@
                ds.pass_code,
                DATE_FORMAT(ds.create_time, '%Y年%m月%d日 %H:%i') AS create_time,
                ds.create_by,
-               ds.expire_days
+               ds.expire_days,
+               ds.access_num,
+               ds.access_status
         from `data_share` ds
         where ds.is_delete = 0
           and ds.create_by = #{userId}

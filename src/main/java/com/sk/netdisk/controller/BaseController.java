@@ -4,7 +4,9 @@ import com.sk.netdisk.controller.request.GeneralRequest;
 import com.sk.netdisk.enums.AppExceptionCodeMsg;
 import com.sk.netdisk.enums.DataEnum;
 import com.sk.netdisk.exception.AppException;
+import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.dto.DataDetInfoDto;
+import com.sk.netdisk.pojo.dto.DataPathDto;
 import com.sk.netdisk.service.DataService;
 import com.sk.netdisk.service.DataShareService;
 import com.sk.netdisk.service.UserService;
@@ -135,11 +137,9 @@ public class BaseController {
     }
 
 
-    @ApiOperation(value = "根据文件id和code遍历文件")
+    @ApiOperation(value = "无权限遍历分享的文件")
     @GetMapping("/infoData/{parentDataId}")
-    public ResponseResult infoData(@PathVariable Integer parentDataId,@RequestBody GeneralRequest generalRequest) {
-        Integer shareId = generalRequest.getShareId();
-        String passCode = generalRequest.getPassCode();
+    public ResponseResult infoData(@PathVariable Integer parentDataId,Integer shareId,String passCode) {
         if (Objects.isNull(parentDataId) || Objects.isNull(shareId)) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
@@ -151,7 +151,15 @@ public class BaseController {
     }
 
 
-
+    @ApiOperation(value = "无权限获取路径")
+    @GetMapping("/getDataPath/{dataId}")
+    public ResponseResult getDataPath(@PathVariable Integer dataId,Integer shareId,String passCode) {
+        if (Objects.isNull(dataId) || Objects.isNull(shareId)) {
+            throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
+        }
+        List<DataPathDto> dataPath = dataService.getDataPath(dataId,shareId,passCode);
+        return ResponseResult.success(dataPath);
+    }
 
 
 }

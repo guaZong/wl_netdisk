@@ -13,6 +13,7 @@ import com.sk.netdisk.pojo.vo.DataInfoVo;
 import com.sk.netdisk.service.DataDelService;
 import com.sk.netdisk.service.DataService;
 import com.sk.netdisk.util.ResponseResult;
+import com.sk.netdisk.util.UserUtil;
 import io.swagger.annotations.ApiOperation;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +48,17 @@ public class DataController {
         if (Objects.isNull(parentDataId)) {
             throw new AppException(AppExceptionCodeMsg.FOLDER_NOT_EXISTS);
         }
-        List<DataDetInfoDto> dataList = dataService.infoData(parentDataId);
+        List<DataDetInfoDto> dataList = dataService.traverseDataByParentId(parentDataId);
+        return ResponseResult.success(dataList);
+    }
+
+    @ApiOperation(value = "根据类型遍历")
+    @GetMapping("/traverseDataByType/{type}")
+    public ResponseResult traverseDataByType(@PathVariable Integer type) {
+        if (Objects.isNull(type)) {
+            throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
+        }
+        List<DataDetInfoDto> dataList = dataService.traverseDataByType(type);
         return ResponseResult.success(dataList);
     }
 
@@ -90,7 +101,7 @@ public class DataController {
         if (Objects.isNull(dataId)) {
             throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
         }
-        DataInfoVo dataInfo = dataService.getDataInfo(dataId);
+        DataInfoVo dataInfo = dataService.getDataDetail(dataId);
         return ResponseResult.success(dataInfo);
     }
 
@@ -123,7 +134,8 @@ public class DataController {
     @ApiOperation(value = "遍历回收站文件")
     @GetMapping("/infoDataDel")
     public ResponseResult infoDataDel() {
-        List<DataDelInfoVo> dataDelInfoVos = dataService.infoDataDel();
+        Integer userId = UserUtil.getLoginUserId();
+        List<DataDelInfoVo> dataDelInfoVos = dataDelService.infoAllDataDel(userId);
         return ResponseResult.success(dataDelInfoVos);
     }
 
@@ -289,6 +301,15 @@ public class DataController {
         dataService.setSortNum(sortType,sortOrder);
         return ResponseResult.success();
     }
+
+
+    @ApiOperation(value = "获取当前文件排序规则")
+    @GetMapping("/getSortNum")
+    public ResponseResult getSortNum() {
+        List<Integer> sortNum = dataService.getSortNum();
+        return ResponseResult.success(sortNum);
+    }
+
 
 
 

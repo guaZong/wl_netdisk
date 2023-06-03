@@ -33,15 +33,15 @@ public interface DataMapper extends BaseMapper<Data> {
 
     /**
      * 查找已经被删除的文件
-     * @param dataId
-     * @return
+     * @param dataId dataId
+     * @return List<Data>
      */
     List<Data> findDelData(Integer dataId);
 
     /**
      * 通过id查找文件
-     * @param dataId
-     * @return
+     * @param dataId dataId
+     * @return Data
      */
     Data findById(Integer dataId);
 
@@ -110,7 +110,7 @@ public interface DataMapper extends BaseMapper<Data> {
     /**
      * 彻底批量删除父文件id是 parentDataId的所有文件
      * @param parentDataId 父文件id
-     * @return
+     * @return Integer
      */
     Integer batchFinalDelData(Integer parentDataId);
 
@@ -149,6 +149,21 @@ public interface DataMapper extends BaseMapper<Data> {
      * @return List<String>
      */
     List<String> findNameByParentDataId(Integer parentDataId,Integer userId);
+
+    /**
+     * 根据父级id查询子文件id集合
+     * @param parentDataId parentDataId
+     * @return List<Integer>
+     */
+    List<Integer> findIdsByParentDataId(Integer parentDataId);
+
+    /**
+     * 通过类型查找
+     * @param type type
+     * @param userId userId
+     * @return List<DataDetInfoDto>
+     */
+    List<DataDetInfoDto> findDataByType(Integer type,Integer userId);
 }
 
 

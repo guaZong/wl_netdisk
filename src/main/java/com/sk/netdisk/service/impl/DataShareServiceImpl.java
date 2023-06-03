@@ -23,7 +23,6 @@ import com.sk.netdisk.service.DataShareService;
 import com.sk.netdisk.util.CommonUtils;
 import com.sk.netdisk.util.Redis.RedisUtil;
 import com.sk.netdisk.util.UserUtil;
-import com.sun.istack.Nullable;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -33,6 +32,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author Administrator
@@ -291,6 +291,25 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
 
     @Override
     public List<DataDetInfoDto> infoShareData(Integer parentDataId, String passCode, Integer shareId) {
+        DataShare dataShare = this.getById(shareId);
+
+        if (Objects.isNull(dataShare)) {
+            throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
+        }
+
+        String sharePassCode = dataShare.getPassCode();
+        if (!StringUtils.isEmpty(sharePassCode) && !sharePassCode.equals(passCode)) {
+            throw new AppException(AppExceptionCodeMsg.PASSCODE_INVALID);
+        }
+        List<Integer> shareList =shareMapper.selectIdsByShareId(shareId);
+        if (shareList.isEmpty()) {
+            throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
+        }
+        boolean permission = dataService.judgeDataFather(parentDataId, shareList);
+        //没有权限访问
+        if(!permission){
+            throw new AppException(AppExceptionCodeMsg.INVALID_PERMISSION);
+        }
         return dataMapper.visitorInfoData(parentDataId);
     }
 
@@ -301,6 +320,24 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
             throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
         }
         return dataShare.getId();
+    }
+
+    @Override
+    public void judgeUpdateDataShare(Integer dataId) {
+        Share share = shareMapper.selectOne(new QueryWrapper<Share>().eq("data_id", dataId));
+        System.out.println(share);
+        if (Objects.isNull(share)) {
+            return;
+        }
+        Integer dataShareId = share.getShareId();
+        shareMapper.deleteByDataId(dataId);
+        List<Share> shareList = shareMapper.selectList(new QueryWrapper<Share>().eq("share_id", dataShareId));
+        System.out.println(shareList);
+        if (shareList.isEmpty()) {
+            this.update(new DataShare(), new UpdateWrapper<DataShare>()
+                    .set("access_status", DataEnum.SHARE_IS_DELETE.getIndex())
+                    .eq("id", dataShareId));
+        }
     }
 
 

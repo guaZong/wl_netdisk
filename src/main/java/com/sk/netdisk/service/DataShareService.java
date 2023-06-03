@@ -88,4 +88,10 @@ public interface DataShareService extends IService<DataShare> {
      * @return Integer
      */
     Integer findIdByUidAndCode(String uuid, String passCode);
+
+    /**
+     * 判断删除文件的时候是否需要更改分享文件的状态
+     * @param dataId 文件id
+     */
+    void judgeUpdateDataShare(Integer dataId);
 }

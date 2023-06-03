@@ -26,7 +26,15 @@ public interface DataService extends IService<Data> {
      * @param parentDataId 父文件夹id
      * @return List<DataDetInfoDto>
      */
-    List<DataDetInfoDto> infoData(Integer parentDataId);
+    List<DataDetInfoDto> traverseDataByParentId(Integer parentDataId);
+
+    /**
+     * 根据type类型遍历文件
+     *
+     * @param type type类型
+     * @return List<DataDetInfoDto>
+     */
+    List<DataDetInfoDto> traverseDataByType(Integer type);
 
     /**
      * 获取文件详细信息
@@ -34,14 +42,7 @@ public interface DataService extends IService<Data> {
      * @param dataId 文件id
      * @return DataInfoVo
      */
-    DataInfoVo getDataInfo(Integer dataId);
-
-    /**
-     * 遍历回收站
-     *
-     * @return List<DataDelInfoVo>
-     */
-    List<DataDelInfoVo> infoDataDel();
+    DataInfoVo getDataDetail(Integer dataId);
 
     /**
      * 通过当前文件id获取上一个文件id
@@ -68,12 +69,23 @@ public interface DataService extends IService<Data> {
      */
     List<DataPathDto> getDataPath(Integer dataId);
 
+
+    /**
+     * 无权限获取当前路径
+     * @param dataId dataId
+     * @param shareId shareId
+     * @param passCode passCode
+     * @return List<DataPathDto>
+     */
+    List<DataPathDto> getDataPath(Integer dataId,Integer shareId,String passCode);
+
     /**
      * 排序文件
-     * @param sortType 排序类型
+     *
+     * @param sortType  排序类型
      * @param sortOrder 排序方式
      */
-    void setSortNum(Integer sortType,Integer sortOrder);
+    void setSortNum(Integer sortType, Integer sortOrder);
 
     /**
      * 创建文件夹
@@ -107,7 +119,6 @@ public interface DataService extends IService<Data> {
      * @param dataIds List<Integer>文件id集合
      */
     void batchDelData(List<Integer> dataIds);
-
 
 
     /**
@@ -145,11 +156,9 @@ public interface DataService extends IService<Data> {
      * @param ids       将要进行覆盖的文件id
      * @param newDataId 某个文件夹id下进行
      * @param sourceIds 将要被覆盖的id
-     * @param status 指标
-     * @throws InterruptedException InterruptedException
-     *
+     * @param status    指标
      */
-    void batchOverrideFiles(List<Integer> ids, Integer newDataId, List<Integer> sourceIds,Integer status);
+    void batchOverrideFiles(List<Integer> ids, Integer newDataId, List<Integer> sourceIds, Integer status);
 
     /**
      * 批量生成副本
@@ -167,4 +176,19 @@ public interface DataService extends IService<Data> {
      */
     void restoreData(List<Integer> dataDelIds);
 
+    /**
+     * 获取排序规则
+     *
+     * @return List<Integer>
+     */
+    List<Integer> getSortNum();
+
+    /**
+     * 判断当前文件id上级是否存在fatherDataId
+     *
+     * @param nowDataId     当前文件id
+     * @param fatherDataIds 父辈文件id集合
+     * @return boolean
+     */
+    boolean judgeDataFather(Integer nowDataId, List<Integer> fatherDataIds);
 }
