@@ -26,6 +26,7 @@ import org.springframework.amqp.rabbit.annotation.QueueBinding;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.converter.MessageConversionException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;
@@ -69,6 +70,18 @@ public class RabbitListenerMethods {
         this.dataMapper = dataMapper;
     }
 
+    @Value("${aliyun.findPwdTemplateCode}")
+    private String findPwdTemplateCode;
+
+    @Value("${aliyun.finalDelTemplateCode}")
+    private String finalDelTemplateCode;
+
+    @Value("${aliyun.mailTemplateCode}")
+    private String mailTemplateCode;
+
+    @Value("${aliyun.loginTemplateCode}")
+    private String loginTemplateCode;
+
 
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(name = "loginPhoneCodeQueue"),
@@ -76,10 +89,10 @@ public class RabbitListenerMethods {
             key = {RabbitmqConstants.BIND_LOGIN_KEY})
     )
     public void loginPhoneCodeListener(RabbitCodeVO rabbitCodeVO) {
-        String phoneNumber= rabbitCodeVO.getAccount();
-        String code= rabbitCodeVO.getCode();
-        sendSmsUtil.sendSms(phoneNumber, code);
-        log.info("{} 登录验证码: {}",phoneNumber,code);
+        String phoneNumber = rabbitCodeVO.getAccount();
+        String code = rabbitCodeVO.getCode();
+        sendSmsUtil.sendSms(phoneNumber, code, loginTemplateCode);
+        log.info("{} 登录验证码: {}", phoneNumber, code);
     }
 
     @RabbitListener(bindings = @QueueBinding(
@@ -88,12 +101,11 @@ public class RabbitListenerMethods {
             key = {RabbitmqConstants.BIND_FIND_PWD_KEY})
     )
     public void findPwdCodeListener(RabbitCodeVO rabbitCodeVO) {
-        String phoneNumber= rabbitCodeVO.getAccount();
-        String code= rabbitCodeVO.getCode();
-        sendSmsUtil.sendSms(phoneNumber, code);
-        log.info("{} 找回密码验证码: {}",phoneNumber,code);
+        String phoneNumber = rabbitCodeVO.getAccount();
+        String code = rabbitCodeVO.getCode();
+        sendSmsUtil.sendSms(phoneNumber, code, findPwdTemplateCode);
+        log.info("{} 找回密码验证码: {}", phoneNumber, code);
     }
-
 
 
     @RabbitListener(bindings = @QueueBinding(
@@ -102,12 +114,12 @@ public class RabbitListenerMethods {
             key = {RabbitmqConstants.BIND_BIND_EMAIL_KEY})
     )
     public void bindEmailCodeListener(RabbitCodeVO rabbitCodeVO) {
-        String email= rabbitCodeVO.getAccount();
-        String code= rabbitCodeVO.getCode();
-        String tmp="[未来网盘] 您的绑定邮箱验证码为: "+code+",有效期五分钟";
-        String sub="未来网盘 | 绑定邮箱验证码";
-        emailUtils.sendEmail(email,tmp,sub);
-        log.info("{} 邮箱绑定验证码: {}",email,code);
+        String email = rabbitCodeVO.getAccount();
+        String code = rabbitCodeVO.getCode();
+        String tmp = "[未来网盘] 您的绑定邮箱验证码为: " + code + ",有效期五分钟";
+        String sub = "未来网盘 | 绑定邮箱验证码";
+        emailUtils.sendEmail(email, tmp, sub);
+        log.info("{} 邮箱绑定验证码: {}", email, code);
     }
 
 
@@ -117,10 +129,10 @@ public class RabbitListenerMethods {
             key = {RabbitmqConstants.BIND_FINAL_DEL_KEY})
     )
     public void bindPhoneDelCodeListener(RabbitCodeVO rabbitCodeVO) {
-        String phoneNumber= rabbitCodeVO.getAccount();
-        String code= rabbitCodeVO.getCode();
-        sendSmsUtil.sendSms(phoneNumber, code);
-        log.info("{} 删除回收站验证码: {}",phoneNumber,code);
+        String phoneNumber = rabbitCodeVO.getAccount();
+        String code = rabbitCodeVO.getCode();
+        sendSmsUtil.sendSms(phoneNumber, code, finalDelTemplateCode);
+        log.info("{} 删除回收站验证码: {}", phoneNumber, code);
     }
 
     @RabbitListener(bindings = @QueueBinding(
@@ -142,17 +154,17 @@ public class RabbitListenerMethods {
     public void bindDlxFinalDelData(Integer dataDelId) {
         try {
             DataDel dataDel = dataDelMapper.selectById(dataDelId);
-            if(!Objects.isNull(dataDel)){
+            if (!Objects.isNull(dataDel)) {
                 Integer dataId = dataDel.getDataId();
                 Data data = dataMapper.findById(dataId);
-                if(data==null){
+                if (data == null) {
                     return;
                 }
                 dataMapper.finalDelData(dataId);
                 dataDelService.recurCountFinalDelete(data);
                 dataDelService.removeById(dataDelId);
             }
-        }catch (Exception e){
+        } catch (Exception e) {
             throw new MessageConversionException("消息消费失败，移出消息队列，不再试错");
         }
 

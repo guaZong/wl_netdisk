@@ -4,10 +4,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.pojo.dto.DataPathDto;
-import com.sk.netdisk.pojo.dto.ShareInfoDto;
-import com.sk.netdisk.pojo.vo.DataDelInfoVo;
 import com.sk.netdisk.pojo.vo.DataInfoVo;
-import com.sun.istack.Nullable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -191,4 +188,13 @@ public interface DataService extends IService<Data> {
      * @return boolean
      */
     boolean judgeDataFather(Integer nowDataId, List<Integer> fatherDataIds);
+
+    /**
+     * 无权限获取路径和文件
+     * @param dataId dataId
+     * @param shareId shareId
+     * @param passCode passCode
+     * @return List<Object>
+     */
+    List<Object> getDataPathAndData(Integer dataId, Integer shareId, String passCode);
 }

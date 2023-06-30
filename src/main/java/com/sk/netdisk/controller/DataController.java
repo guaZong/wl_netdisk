@@ -207,17 +207,17 @@ public class DataController {
 
     @ApiOperation(value = "批量覆盖原有文件")
     @PostMapping("/batchOverrideFiles")
-    public ResponseResult batchOverrideFiles(@RequestBody GeneralRequest generalRequest){
+    public ResponseResult batchOverrideFiles(@RequestBody GeneralRequest generalRequest) {
         Set<Integer> sourceDataIds = generalRequest.getSids();
         Set<Integer> dataIds = generalRequest.getIds();
         Integer newDataId = generalRequest.getTargetFolderId();
-        Integer auto=0;
+        Integer auto = 0;
         if (dataIds.isEmpty() || newDataId == null || sourceDataIds.isEmpty() || dataIds.size() != sourceDataIds.size()) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         List<Integer> ids = new ArrayList<>(dataIds);
         List<Integer> sourceIds = new ArrayList<>(sourceDataIds);
-        dataService.batchOverrideFiles(ids, newDataId, sourceIds,auto);
+        dataService.batchOverrideFiles(ids, newDataId, sourceIds, auto);
         return ResponseResult.success();
     }
 
@@ -278,8 +278,6 @@ public class DataController {
         return ResponseResult.success();
     }
 
-
-
     @ApiOperation(value = "获取路径")
     @GetMapping("/getDataPath/{dataId}")
     public ResponseResult getDataPath(@PathVariable Integer dataId) {
@@ -298,7 +296,7 @@ public class DataController {
         if (Objects.isNull(sortType) || Objects.isNull(sortOrder)) {
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }
-        dataService.setSortNum(sortType,sortOrder);
+        dataService.setSortNum(sortType, sortOrder);
         return ResponseResult.success();
     }
 
@@ -309,8 +307,6 @@ public class DataController {
         List<Integer> sortNum = dataService.getSortNum();
         return ResponseResult.success(sortNum);
     }
-
-
 
 
 

@@ -27,8 +27,6 @@ public class SendSmsUtil {
     private String accessKeySecret;
     @Value("${aliyun.signName}")
     private String signName;
-    @Value("${aliyun.templateCode}")
-    private String templateCode;
 
     /**
      * 初始化账号连接Client
@@ -48,13 +46,13 @@ public class SendSmsUtil {
      * 发送短信
      * @param phoneNum 手机号码
      * @param code 短信验证码
-     * @throws Exception
+     *
      */
-    public void sendSms(String phoneNum, String code)  {
+    public void sendSms(String phoneNum, String code, String template)  {
         Client client;
         SendSmsRequest sendSmsRequest = new SendSmsRequest()
                 .setSignName(signName)
-                .setTemplateCode(templateCode)
+                .setTemplateCode(template)
                 .setPhoneNumbers(phoneNum)
                 .setTemplateParam("{\"code\":\""+code+"\"}");
         RuntimeOptions runtime = new RuntimeOptions();
@@ -71,7 +69,6 @@ public class SendSmsUtil {
             TeaException error = new TeaException(_error.getMessage(), _error);
             // 如有需要，请打印 error
             com.aliyun.teautil.Common.assertAsString(error.message);
-
         }
     }
 

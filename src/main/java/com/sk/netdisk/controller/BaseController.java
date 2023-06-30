@@ -162,4 +162,14 @@ public class BaseController {
     }
 
 
+    @ApiOperation(value = "无权限获取路径和遍历文件")
+    @GetMapping("/getDataPathAndData/{dataId}")
+    public ResponseResult getDataPathAndData(@PathVariable Integer dataId,Integer shareId,String passCode) {
+        if (Objects.isNull(dataId) || Objects.isNull(shareId)) {
+            throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
+        }
+        List<Object> dataPath = dataService.getDataPathAndData(dataId,shareId,passCode);
+        return ResponseResult.success(dataPath);
+    }
+
 }

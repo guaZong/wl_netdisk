@@ -234,7 +234,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     }
 
     @Override
-    public List<DataPathDto> getDataPath(Integer dataId,Integer shareId,String passCode) {
+    public List<DataPathDto> getDataPath(Integer dataId, Integer shareId, String passCode) {
         DataShare dataShare = dataShareService.getById(shareId);
         if (Objects.isNull(dataShare)) {
             throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
@@ -255,7 +255,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         }
         List<Integer> dataIdIdList = shareMapper.selectIdsByShareId(shareId);
         boolean permission = judgeDataFather(dataId, dataIdIdList);
-        if(!permission){
+        if (!permission) {
             throw new AppException(AppExceptionCodeMsg.INVALID_PERMISSION);
         }
         recurToCountPath(data, result);
@@ -749,24 +749,11 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             if (Objects.isNull(dataDel)) {
                 continue;
             }
-            dataMapper.restoreDeleteData(dataDel.getDataId(), userId);
-            recurToRestoreData(dataDel.getDataId(), userId);
+            Integer dataId = dataDel.getDataId();
+            recurRestoreFatherData(dataId, userId);
+            recurToRestoreData(dataId,userId);
             dataDelService.removeById(dataDel.getId());
         }
-    }
-
-    @Override
-    public List<Integer> getSortNum() {
-        Integer userId = UserUtil.getLoginUserId();
-        Object sortType = redisUtil.hget(RedisConstants.SORT_KEY + userId, "sortType");
-        Object sortOrder = redisUtil.hget(RedisConstants.SORT_KEY + userId, "sortOrder");
-        List<Integer> res = new ArrayList<>();
-        if (Objects.isNull(sortType) || Objects.isNull(sortOrder)) {
-            return res;
-        }
-        res.add((Integer) sortType);
-        res.add((Integer) sortOrder);
-        return res;
     }
 
     /**
@@ -790,11 +777,40 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
     }
 
+
+    void recurRestoreFatherData(Integer dataId,Integer userId){
+        Data fatherData = dataMapper.findFatherDataById(dataId);
+        if(Objects.isNull(fatherData)){
+            dataMapper.restoreDeleteData(dataId, userId);
+            return;
+        }
+        if(fatherData.getIsDelete()==1){
+            recurRestoreFatherData(fatherData.getId(),userId);
+        }
+        dataMapper.restoreDeleteData(dataId, userId);
+        //找到删除的文件,然后找到他的父亲,if(父亲不存在) 多线程递归,如果父亲存在那么就还原当前的文件id
+    }
+
+    @Override
+    public List<Integer> getSortNum() {
+        Integer userId = UserUtil.getLoginUserId();
+        Object sortType = redisUtil.hget(RedisConstants.SORT_KEY + userId, "sortType");
+        Object sortOrder = redisUtil.hget(RedisConstants.SORT_KEY + userId, "sortOrder");
+        List<Integer> res = new ArrayList<>();
+        if (Objects.isNull(sortType) || Objects.isNull(sortOrder)) {
+            return res;
+        }
+        res.add((Integer) sortType);
+        res.add((Integer) sortOrder);
+        return res;
+    }
+
+
     /**
      * 递归计算所有文件大小
      *
      * @param dataId             文件id
-     * @param recurCountSizeInfo RecurCountSizeInfo-
+     * @param recurCountSizeInfo RecurCountSizeInfo
      */
     public void recurCountSize(Integer dataId, RecurCountSizeInfo recurCountSizeInfo) {
         List<Data> dataList = this.list(new QueryWrapper<Data>().eq("parent_data_id", dataId));
@@ -950,19 +966,62 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     @Override
     public boolean judgeDataFather(Integer nowDataId, List<Integer> fatherDataIds) {
-        if(fatherDataIds.contains(nowDataId)){
+        if (fatherDataIds.contains(nowDataId)) {
             return true;
         }
         if (nowDataId == DataEnum.ZERO_FOLDER.getIndex()) {
             return false;
         }
         Data data = this.getById(nowDataId);
-        if (data.getParentDataId() == DataEnum.ZERO_FOLDER.getIndex()) {
+        if (Objects.isNull(data) || data.getParentDataId() == DataEnum.ZERO_FOLDER.getIndex()) {
             return false;
         }
         Result result = new Result(false);
         recurJudgeDataFather(nowDataId, result, fatherDataIds);
         return result.isRes();
+    }
+
+    @Override
+    public List<Object> getDataPathAndData(Integer dataId, Integer shareId, String passCode) {
+        DataShare dataShare = dataShareService.getById(shareId);
+        if (Objects.isNull(dataShare)) {
+            throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
+        }
+
+        String sharePassCode = dataShare.getPassCode();
+        if (!StringUtils.isEmpty(sharePassCode) && !sharePassCode.equals(passCode)) {
+            throw new AppException(AppExceptionCodeMsg.PASSCODE_INVALID);
+        }
+
+        List<Integer> shareList = shareMapper.selectIdsByShareId(shareId);
+        if (shareList.isEmpty()) {
+            throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
+        }
+
+        Data data = this.getById(dataId);
+        List<Object> result = new ArrayList<>();
+        List<DataPathDto> pathList = new ArrayList<>();
+
+        boolean permission = judgeDataFather(dataId, shareList);
+        //没有权限访问
+        if (!permission) {
+            throw new AppException(AppExceptionCodeMsg.INVALID_PERMISSION);
+        }
+        if (dataId == DataEnum.ZERO_FOLDER.getIndex()) {
+            pathList.add(new DataPathDto(0, "/"));
+        } else {
+            if (Objects.isNull(data)) {
+                throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
+            }
+            recurToCountPath(data, pathList);
+            Collections.reverse(pathList);
+            pathList.add(new DataPathDto(dataId, data.getName()));
+        }
+        result.add(pathList);
+
+        List<DataDetInfoDto> dataDetInfo = dataMapper.visitorInfoData(dataId);
+        result.add(dataDetInfo);
+        return result;
     }
 
 
@@ -972,7 +1031,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             return;
         }
         List<CompletableFuture> futures = new ArrayList<>();
-        for(Integer fatherDataId:fatherDataIds){
+        for (Integer fatherDataId : fatherDataIds) {
             CompletableFuture<Void> completableFuture = CompletableFuture.runAsync(() -> {
                 List<Integer> dataIdList = dataMapper.findIdsByParentDataId(fatherDataId);
                 recurJudgeDataFather(dataId, result, dataIdList);

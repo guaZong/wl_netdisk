@@ -220,4 +220,11 @@
     </select>
 
 
+    <select id="findFatherDataById" resultType="com.sk.netdisk.pojo.Data">
+        select *
+        from `data`
+        where id in (select parent_data_id from `data` where id = #{dataId})
+    </select>
+
+
 </mapper>
