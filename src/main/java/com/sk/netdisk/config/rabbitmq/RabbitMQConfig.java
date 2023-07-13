@@ -56,30 +56,30 @@ public class RabbitMQConfig {
         return rabbitTemplate;
     }
 
-
-    /**
-     *      * 这个方法用于创建一个监听器容器，它会监听指定的队列（这里是"queue2"）并注册一个消息监听器（这里是"MyMessageListener2"），
-     *      * 用于处理从该队列中接收到的消息。具体来说，以下是这个方法的几个关键配置项的作用：
-     *      * connectionFactory()：用于指定连接工厂，用于创建与RabbitMQ服务器的连接。
-     *      * queueNames("queue2")：用于指定要监听的队列名称。
-     *      * new MyMessageListener2()：用于指定一个自定义的消息监听器，用于处理从队列中接收到的消息。
-     *      * messageConverter()：用于指定消息转换器，用于将接收到的消息转换为Java对象。
-     *      * container.setConcurrency("1");：用于设置并发消费者的数量。
-     *      * 简单来说，这个方法的作用就是创建一个可以监听队列的容器，并注册一个消息监听器用于处理接收到的消息，
-     *      * 以实现异步消息处理的功能。在启动这个容器后，它将会一直运行并等待从队列中接收到新的消息，然后调用消息监听器处理这些消息。
-     * @return
-     */
-    @Bean
-    public SimpleMessageListenerContainer container2() {
-        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
-        container.setConnectionFactory(connectionFactory);
-        //这里是消费端消息确认的监听,所以只用监听哪个队列就行
-        container.setQueueNames("test_confirm_queue");
-        container.setAcknowledgeMode(AcknowledgeMode.MANUAL);
-        container.setMessageListener(new MyMessageListener());
-        container.setPrefetchCount(1000);
-        return container;
-    }
+//
+//    /**
+//     *      * 这个方法用于创建一个监听器容器，它会监听指定的队列（这里是"queue2"）并注册一个消息监听器（这里是"MyMessageListener2"），
+//     *      * 用于处理从该队列中接收到的消息。具体来说，以下是这个方法的几个关键配置项的作用：
+//     *      * connectionFactory()：用于指定连接工厂，用于创建与RabbitMQ服务器的连接。
+//     *      * queueNames("queue2")：用于指定要监听的队列名称。
+//     *      * new MyMessageListener2()：用于指定一个自定义的消息监听器，用于处理从队列中接收到的消息。
+//     *      * messageConverter()：用于指定消息转换器，用于将接收到的消息转换为Java对象。
+//     *      * container.setConcurrency("1");：用于设置并发消费者的数量。
+//     *      * 简单来说，这个方法的作用就是创建一个可以监听队列的容器，并注册一个消息监听器用于处理接收到的消息，
+//     *      * 以实现异步消息处理的功能。在启动这个容器后，它将会一直运行并等待从队列中接收到新的消息，然后调用消息监听器处理这些消息。
+//     * @return
+//     */
+//    @Bean
+//    public SimpleMessageListenerContainer container2() {
+//        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
+//        container.setConnectionFactory(connectionFactory);
+//        //这里是消费端消息确认的监听,所以只用监听哪个队列就行
+//        container.setQueueNames("test_confirm_queue");
+//        container.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+//        container.setMessageListener(new MyMessageListener());
+//        container.setPrefetchCount(1000);
+//        return container;
+//    }
 
     /**
      * 定义普通的交换机和队列并绑定

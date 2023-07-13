@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.sk.netdisk.mapper.TransferLogMapper">
+<mapper namespace="com.sk.netdisk.mapper.TransferMapper">
 
-    <resultMap id="BaseResultMap" type="com.sk.netdisk.pojo.TransferLog">
+    <resultMap id="BaseResultMap" type="com.sk.netdisk.pojo.Transfer">
             <id property="id" column="id" jdbcType="INTEGER"/>
             <result property="dataId" column="data_id" jdbcType="INTEGER"/>
             <result property="fileName" column="file_name" jdbcType="VARCHAR"/>

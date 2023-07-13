@@ -15,7 +15,6 @@ import com.sk.netdisk.enums.DataEnum;
 import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.FileMapper;
-import com.sk.netdisk.mapper.QuickDataMapper;
 import com.sk.netdisk.mapper.ShareMapper;
 import com.sk.netdisk.pojo.*;
 import com.sk.netdisk.pojo.dto.DataDetInfoDto;
@@ -42,7 +41,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 /**
@@ -76,6 +74,10 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     @Autowired
     ShareMapper shareMapper;
+
+    @Autowired
+    UploadUtil uploadUtil;
+
 
     @Autowired
     public DataServiceImpl(DataMapper dataMapper, RedisUtil redisUtil,
@@ -331,9 +333,11 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             }
             String fileMd5 = CommonUtils.getFileMd5(file);
             Object fileId = redisUtil.hget(RedisConstants.FILE_KEY + fileMd5, "fileId");
+            boolean exist=CommonUtils.judgeExistFile(file.getOriginalFilename(),fileMd5);
             if (Objects.isNull(fileId)) {
+//                String link = uploadUtil.uploadFile(file);
                 String link = ossUtil.easyUpload(file);
-                File newFile = new File(fileMd5, link, userId, CommonUtils.getFileSize(file.getSize()), String.valueOf(file.getSize()));
+                File newFile = new File(fileMd5, link, userId,new Date(), CommonUtils.getFileSize(file.getSize()), String.valueOf(file.getSize()));
                 fileMapper.insert(newFile);
                 data.setFileId(newFile.getId());
                 redisStorageFile(fileMd5, newFile.getId(), file.getSize());
@@ -837,7 +841,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
     private Data createData(MultipartFile file, Integer parentDataId) {
         Integer userId = UserUtil.getLoginUserId();
         String name = judgeReName(file.getOriginalFilename(), parentDataId, 1, userId);
-        int fileType = UploadUtil.getFileType(file);
+        int fileType = UploadUtil.getFileType(file.getOriginalFilename());
         //如果当前目录不为根目录
         if (parentDataId != DataEnum.ZERO_FOLDER.getIndex()) {
             Data parentData = this.getById(parentDataId);

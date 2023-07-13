@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 /**
  * 文件路径dto
+ *
  * @author lsj
  */
 @Data
@@ -14,6 +15,7 @@ import lombok.NoArgsConstructor;
 public class DataPathDto {
 
     private Integer id;
+
     private String folderName;
 
 }

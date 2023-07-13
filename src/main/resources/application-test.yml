@@ -2,12 +2,15 @@ server:
   servlet:
     context-path: /netDisk
   port: 1314
+  ip: 192.168.30.134
 
-  ip: 120.27.194.228
 spring:
+  config:
+    activate:
+      on-profile: test
   datasource:
     username: root
-    url: jdbc:mysql://120.27.194.228:3306/sk_netdisk?useSSL=false&useUnicode=true&characterEncoding=utf8
+    url: jdbc:mysql://192.168.30.134:3307/wl_netdisk?useSSL=false&useUnicode=true&characterEncoding=utf8
     password: 'Lishoujia991121.'
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.alibaba.druid.pool.DruidDataSource
@@ -29,9 +32,11 @@ spring:
       suffix: .html
   redis:
     #redis服务器地址
-    host: 120.27.194.228
+    host: 192.168.30.134
     #redis服务器端口
     port: 6379
+    #redis的密码
+    password: Lishoujia3301
     #redis数据库索引(默认为0)
     database: 0
     #连接超时时间(毫秒)
@@ -46,8 +51,6 @@ spring:
         min-idle: 0
         #连接池中的最大空闲连接
         max-idle: 5
-        #redis的密码
-    password: Lishoujia3301
   mail:
     host: smtp.qq.com
     username: 2038605485@qq.com
@@ -68,10 +71,10 @@ spring:
             enable: true
             required: true
   rabbitmq:
-    host: 120.27.194.228
+    host: 192.168.30.134
     port: 5672
-    username: root
-    password: root
+    username: admin
+    password: admin
     virtual-host: /
     publisher-returns: true
     #simple：每个发布操作的结果会立即返回一个确认或拒绝的响应。这是默认值。
@@ -86,9 +89,12 @@ spring:
       mandatory: true
       retry:
         max-attempts: 5
+
   web:
     resources:
       static-locations: classpath:/templates/,classpath:/static/,classpath:/resources/,classpath:/public/
+
+
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
@@ -120,4 +126,5 @@ aliyun:
   finalDelTemplateCode: "SMS_461025655"
   findPwdTemplateCode: "SMS_460935674"
 
+uploadFolder: "sj/"
 domainName: "https://netdisk.lovelsj.com/"

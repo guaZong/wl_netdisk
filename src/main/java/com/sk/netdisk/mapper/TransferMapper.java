@@ -1,8 +1,11 @@
 package com.sk.netdisk.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.sk.netdisk.pojo.TransferLog;
+import com.sk.netdisk.pojo.Share;
+import com.sk.netdisk.pojo.Transfer;
 import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
 
 
 /**
@@ -12,7 +15,7 @@ import org.apache.ibatis.annotations.Mapper;
 * @Entity gen.domain.TransferLog
 */
 @Mapper
-public interface TransferLogMapper extends BaseMapper<TransferLog> {
+public interface TransferMapper extends BaseMapper<Transfer> {
 
 }
 

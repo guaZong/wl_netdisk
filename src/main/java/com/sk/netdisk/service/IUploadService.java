@@ -34,5 +34,5 @@ public interface IUploadService {
      * @return
      * @throws IOException
      */
-    boolean mergeChunk(String identifier,String fileName,Integer totalChunks)throws  IOException;
+    boolean mergeChunk(String identifier,String fileName,Integer totalChunks,Long totalSize)throws  IOException;
 }

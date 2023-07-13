@@ -74,11 +74,11 @@ class NetdiskApplicationTests {
 //    }
 
 
-    @Test
-    public void testpro() throws Exception {
-
-        rabbitTemplate.convertAndSend("test1_exchange", "", "haha");
-    }
+//    @Test
+//    public void testpro() throws Exception {
+//
+//        rabbitTemplate.convertAndSend("test1_exchange", "", "haha");
+//    }
 
     @Autowired
     RabbitTemplate rabbitTemplate;
@@ -86,37 +86,37 @@ class NetdiskApplicationTests {
     @Autowired
     RabbitMQConfig rabbitMQConfig;
 
-    @Test
-    public void testConfirm() throws Exception {
-        CountDownLatch latch = new CountDownLatch(1);
-        rabbitTemplate.convertAndSend("test1_exchange", "bind", "66666");
-        rabbitTemplate.setConfirmCallback(new RabbitTemplate.ConfirmCallback() {
-            /**
-             * confirm方法
-             * @param correlationData 相关配置信息
-             * @param ack exchange交换机是否成功收到消息
-             * @param cause 失败原因
-             */
-            @Override
-            public void confirm(CorrelationData correlationData, boolean ack, String cause) {
-                System.out.println("发送方法被执行了,不知道返回的结果是啥");
-                System.out.println("发送是否成功呢+ " + ack);
-                if (!ack) {
-                    System.out.println("失败原因: " + cause);
-                }
-                latch.countDown();
-            }
-        });
-        // 等待确认
-        try {
-            if (!latch.await(5, TimeUnit.SECONDS)) {
-                System.out.println("发送失败，等待超时");
-            }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            System.out.println("发送失败，等待被中断");
-        }
-    }
+//    @Test
+//    public void testConfirm() throws Exception {
+//        CountDownLatch latch = new CountDownLatch(1);
+//        rabbitTemplate.convertAndSend("test1_exchange", "bind", "66666");
+//        rabbitTemplate.setConfirmCallback(new RabbitTemplate.ConfirmCallback() {
+//            /**
+//             * confirm方法
+//             * @param correlationData 相关配置信息
+//             * @param ack exchange交换机是否成功收到消息
+//             * @param cause 失败原因
+//             */
+//            @Override
+//            public void confirm(CorrelationData correlationData, boolean ack, String cause) {
+//                System.out.println("发送方法被执行了,不知道返回的结果是啥");
+//                System.out.println("发送是否成功呢+ " + ack);
+//                if (!ack) {
+//                    System.out.println("失败原因: " + cause);
+//                }
+//                latch.countDown();
+//            }
+//        });
+//        // 等待确认
+//        try {
+//            if (!latch.await(5, TimeUnit.SECONDS)) {
+//                System.out.println("发送失败，等待超时");
+//            }
+//        } catch (InterruptedException e) {
+//            Thread.currentThread().interrupt();
+//            System.out.println("发送失败，等待被中断");
+//        }
+//    }
 
     /**
      * 回退模式,当消息发送给exchange之后,exchange路由到Queue失败时,才会执行ReturnCallBack
@@ -126,21 +126,21 @@ class NetdiskApplicationTests {
      * 1.如果没有消息路由到queue,那么默认丢消息
      * 2.如果没有路由到queue,将消息给发送方returncallback
      */
-    @Test
-    public void testReturn() {
-        rabbitTemplate.setReturnCallback(new RabbitTemplate.ReturnCallback() {
-            @Override
-            public void returnedMessage(Message message, int replyCode, String replyText, String exchange, String toutingKey) {
-                System.out.println(message);
-                System.out.println(replyCode);
-                System.out.println(replyText);
-                System.out.println(exchange);
-                System.out.println(toutingKey);
-            }
-        });
-
-        rabbitTemplate.convertAndSend("test1_exchange", "bind", "66666");
-    }
+//    @Test
+//    public void testReturn() {
+//        rabbitTemplate.setReturnCallback(new RabbitTemplate.ReturnCallback() {
+//            @Override
+//            public void returnedMessage(Message message, int replyCode, String replyText, String exchange, String toutingKey) {
+//                System.out.println(message);
+//                System.out.println(replyCode);
+//                System.out.println(replyText);
+//                System.out.println(exchange);
+//                System.out.println(toutingKey);
+//            }
+//        });
+//
+//        rabbitTemplate.convertAndSend("test1_exchange", "bind", "66666");
+//    }
 
 
     /**

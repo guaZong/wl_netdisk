@@ -2,9 +2,9 @@ package com.sk.netdisk.service.impl;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
-import com.sk.netdisk.mapper.TransferLogMapper;
-import com.sk.netdisk.pojo.TransferLog;
-import com.sk.netdisk.service.TransferLogService;
+import com.sk.netdisk.mapper.TransferMapper;
+import com.sk.netdisk.pojo.Transfer;
+import com.sk.netdisk.service.TransferService;
 import org.springframework.stereotype.Service;
 
 /**
@@ -13,8 +13,8 @@ import org.springframework.stereotype.Service;
 * @createDate 2022-11-29 10:50:12
 */
 @Service
-public class TransferLogServiceImpl extends ServiceImpl<TransferLogMapper, TransferLog>
-    implements TransferLogService {
+public class TransferServiceImpl extends ServiceImpl<TransferMapper, Transfer>
+    implements TransferService {
 
 }
 

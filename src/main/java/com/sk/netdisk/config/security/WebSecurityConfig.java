@@ -62,7 +62,8 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                         "/swagger-resources/**",
                         "/v3/**",
                         "/sysVisitor/**",
-                        "/Static/**").permitAll();
+                        "/static/**",
+                        "/view/**").permitAll();
         http.exceptionHandling()
                 //没有权限访问
                 .authenticationEntryPoint(new UnauthEntryPoint())

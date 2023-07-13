@@ -48,10 +48,11 @@ public class File implements Serializable {
      */
     private Integer createBy;
 
-    public File(String md5, String link, Integer createBy, String size, String bytes) {
+    public File(String md5, String link, Integer createBy, Date createTime,String size, String bytes) {
         this.md5 = md5;
         this.link = link;
         this.createBy = createBy;
+        this.createTime=createTime;
         this.size = size;
         this.bytes = bytes;
     }

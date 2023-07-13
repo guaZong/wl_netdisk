@@ -8,11 +8,11 @@ import java.util.Date;
 
 /**
  * 
- * @TableName transfer_log
+ * @TableName transfer
  */
-@TableName(value ="transfer_log")
+@TableName(value ="transfer")
 @Data
-public class TransferLog implements Serializable {
+public class Transfer implements Serializable {
     /**
      * 
      */
@@ -30,7 +30,7 @@ public class TransferLog implements Serializable {
     private String fileName;
 
     /**
-     * 传输状态
+     * 传输状态,0代表上传中,1代表下载中,2代表上传完成,3代表下载完成
      */
     private Integer status;
 

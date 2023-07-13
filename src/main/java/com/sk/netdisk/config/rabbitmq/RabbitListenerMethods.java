@@ -135,15 +135,15 @@ public class RabbitListenerMethods {
         log.info("{} 删除回收站验证码: {}", phoneNumber, code);
     }
 
-    @RabbitListener(bindings = @QueueBinding(
-            value = @Queue(name = "bindAddFileMd5Queue"),
-            exchange = @Exchange(name = RabbitmqConstants.FILE_EXCHANGE, type = "topic"),
-            key = {RabbitmqConstants.BIND_ADD_FILE_MD5})
-    )
-    public void bindAddFileMd5(Integer fileId) {
-        String md5 = fileMapper.selectById(fileId).getMd5();
-        redisUtil.hincr(RedisConstants.FILE_KEY + md5, "useNum", 1);
-    }
+//    @RabbitListener(bindings = @QueueBinding(
+//            value = @Queue(name = "bindAddFileMd5Queue"),
+//            exchange = @Exchange(name = RabbitmqConstants.FILE_EXCHANGE, type = "topic"),
+//            key = {RabbitmqConstants.BIND_ADD_FILE_MD5})
+//    )
+//    public void bindAddFileMd5(Integer fileId) {
+//        String md5 = fileMapper.selectById(fileId).getMd5();
+//        redisUtil.hincr(RedisConstants.FILE_KEY + md5, "useNum", 1);
+//    }
 
 
     @RabbitListener(bindings = @QueueBinding(

@@ -1,10 +1,9 @@
 package com.sk.netdisk.util;
 
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import com.sk.netdisk.util.upload.UploadUtil;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.security.MessageDigest;
@@ -67,6 +66,19 @@ public class CommonUtils {
             sb.append(String.format("%02x", b & 0xff));
         }
         return sb.toString();
+    }
+
+    /**
+     * 判断文件是否存在
+     *
+     * @param fileMd5
+     * @return
+     */
+    public static boolean judgeExistFile(String fileName, String fileMd5) {
+        String realPath = UploadUtil.FILE_PATH + UploadUtil.getStringFileType(fileName)
+                + File.separator + fileMd5 + File.separator + fileName;
+        File fileFolder = new File(realPath);
+        return fileFolder.exists();
     }
 
 
