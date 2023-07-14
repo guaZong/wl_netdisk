@@ -11,4 +11,5 @@ import com.sk.netdisk.pojo.Transfer;
 */
 public interface TransferService extends IService<Transfer> {
 
+    Transfer insertTransfer();
 }
