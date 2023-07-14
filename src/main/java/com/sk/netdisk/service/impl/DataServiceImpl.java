@@ -41,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -1030,6 +1031,9 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
 
     private void recurJudgeDataFather(Integer dataId, Result result, List<Integer> fatherDataIds) {
+        if(result.isRes()){
+            return;
+        }
         if (fatherDataIds.contains(dataId)) {
             result.setRes(true);
             return;
