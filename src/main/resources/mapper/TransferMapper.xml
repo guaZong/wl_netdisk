@@ -6,7 +6,7 @@
 
     <resultMap id="BaseResultMap" type="com.sk.netdisk.pojo.Transfer">
             <id property="id" column="id" jdbcType="INTEGER"/>
-            <result property="dataId" column="data_id" jdbcType="INTEGER"/>
+            <result property="md5" column="data_id" jdbcType="VARCHAR"/>
             <result property="fileName" column="file_name" jdbcType="VARCHAR"/>
             <result property="status" column="status" jdbcType="TINYINT"/>
             <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
@@ -17,7 +17,7 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,data_id,file_name,
+        id,md5,file_name,
         status,create_time,update_time,
         create_by,update_by,is_delete
     </sql>

@@ -21,12 +21,16 @@ public class UserUtil {
      * @return 登录用户id
      */
     public static Integer getLoginUserId() {
-        SecurityContext sc = SecurityContextHolder.getContext();
-        Authentication auth = sc.getAuthentication();
-        SecurityUser securityUser = (SecurityUser) auth.getPrincipal();
-        if(securityUser.getUserId()==null){
+        try {
+            SecurityContext sc = SecurityContextHolder.getContext();
+            Authentication auth = sc.getAuthentication();
+            SecurityUser securityUser = (SecurityUser) auth.getPrincipal();
+            if(securityUser.getUserId()==null){
+                throw new AppException(AppExceptionCodeMsg.USER_NOT_LOGIN);
+            }
+            return securityUser.getUserId();
+        }catch (Exception e){
             throw new AppException(AppExceptionCodeMsg.USER_NOT_LOGIN);
         }
-        return securityUser.getUserId();
     }
 }

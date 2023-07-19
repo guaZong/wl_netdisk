@@ -16,10 +16,7 @@ import org.springframework.stereotype.Service;
 public class TransferServiceImpl extends ServiceImpl<TransferMapper, Transfer>
     implements TransferService {
 
-    @Override
-    public Transfer insertTransfer() {
-        return null;
-    }
+
 }
 
 

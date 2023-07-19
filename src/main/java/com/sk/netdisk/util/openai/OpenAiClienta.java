@@ -14,7 +14,7 @@ import java.time.Duration;
  */
 public class OpenAiClienta {
 
-    private static final String API_KEY = "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";
+    private static final String API_KEY = "改成自己的";
 
     public static void main(String[] args) {
 

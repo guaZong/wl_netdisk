@@ -1,14 +1,20 @@
 package com.sk.netdisk.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.sk.netdisk.constant.RedisConstants;
+import com.sk.netdisk.enums.TransferEnum;
 import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.FileMapper;
+import com.sk.netdisk.mapper.TransferMapper;
 import com.sk.netdisk.pojo.Data;
+import com.sk.netdisk.pojo.Transfer;
 import com.sk.netdisk.pojo.dto.FileChunkDTO;
 import com.sk.netdisk.pojo.dto.FileChunkResultDTO;
 import com.sk.netdisk.service.FileService;
 import com.sk.netdisk.service.IUploadService;
+import com.sk.netdisk.util.CommonUtils;
 import com.sk.netdisk.util.Redis.RedisUtil;
+import com.sk.netdisk.util.UserUtil;
 import com.sk.netdisk.util.upload.UploadUtil;
 import org.apache.tomcat.util.http.fileupload.IOUtils;
 import org.slf4j.Logger;
@@ -43,6 +49,12 @@ public class UploadServiceImpl implements IUploadService {
     @Autowired
     DataServiceImpl dataService;
 
+    @Autowired
+    TransferMapper transferMapper;
+
+    @Autowired
+    DataMapper dataMapper;
+
 
     /**
      * 检查文件是否存在，如果存在则跳过该文件的上传，如果不存在，返回需要上传的分片集合
@@ -52,18 +64,48 @@ public class UploadServiceImpl implements IUploadService {
      */
     @Override
     public FileChunkResultDTO checkChunkExist(FileChunkDTO chunkDTO) {
+        Integer userId = UserUtil.getLoginUserId();
+        Integer parentDataId = 0;
+        if (chunkDTO.getParentDataId() != null) {
+            parentDataId = chunkDTO.getParentDataId();
+        }
+        String fileName = chunkDTO.getFilename();
+        String fileMd5 = chunkDTO.getIdentifier();
         String redisKey = RedisConstants.FILE_KEY + chunkDTO.getIdentifier();
+
+        //检查Redis中是否存在，并且所有分片已经上传完成。,如果redis内存占用过大可以删除redis然后用数据库存储合并成功后的文件
+        Set<Integer> uploaded = (Set<Integer>) redisTemplate.opsForHash().get(redisKey, "uploaded");
+
+        Transfer ts=transferMapper.selectOne(new QueryWrapper<Transfer>()
+                .eq("md5",fileMd5).eq("create_by",userId)
+                .eq("status",TransferEnum.UPLOAD_TRANSFER.getIndex()));
+        if(!Objects.isNull(ts)){
+            return new FileChunkResultDTO(false, uploaded);
+        }
         // 根据文件的MD5值获取文件所在的目录 如: /opt/netdisk/video/zxhjklcjaosijdon5164564/
         String folderPath = getFileFolderPath(chunkDTO.getIdentifier(), chunkDTO.getFilename());
         // 获取文件的绝对路径，如: /opt/netdisk/video/zxhjklcjaosijdon5164564/数学知识.mp4
-        String filePath = getFilePath(chunkDTO.getIdentifier(),chunkDTO.getFilename());
+        String filePath = getFilePath(chunkDTO.getIdentifier(), chunkDTO.getFilename());
+
         File file = new File(filePath);
         boolean exists = file.exists();
-        //检查Redis中是否存在，并且所有分片已经上传完成。,如果redis内存占用过大可以删除redis然后用数据库存储合并成功后的文件
-        Set<Integer> uploaded = (Set<Integer>) redisTemplate.opsForHash()
-                .get(redisKey, "uploaded");
-        //如果上传成功了
+
+        //如果要上传的文件已经存在于文件库
         if (uploaded != null && uploaded.size() == chunkDTO.getTotalChunks() && exists) {
+            //创建transfer状态为上传完成的数据
+            Transfer transfer = new Transfer(fileMd5, fileName,
+                    TransferEnum.UPLOAD_COMPLETE.getIndex(), new Date(), userId);
+            transferMapper.insert(transfer);
+
+            //根据MD5查询file
+            com.sk.netdisk.pojo.File sourceFile = fileMapper
+                    .selectOne(new QueryWrapper<com.sk.netdisk.pojo.File>().eq("md5", fileMd5));
+
+            //创建data
+            Data data = new Data(fileName, UploadUtil.getFileType(fileName)
+                    , parentDataId, new Date(), userId, sourceFile.getId());
+            dataMapper.insert(data);
+
             return new FileChunkResultDTO(true);
         }
         //没有上传或者没有上传成功
@@ -71,6 +113,13 @@ public class UploadServiceImpl implements IUploadService {
         if (!fileFolder.exists()) {
             // 准备工作，创建文件夹
             fileFolder.mkdirs();
+        }
+        //假如此时的文件没有被上传过
+        if (uploaded.isEmpty()) {
+            //创建一个新的transfer数据,状态为上传中
+            Transfer newTransfer = new Transfer(fileMd5, fileName
+                    , TransferEnum.UPLOAD_TRANSFER.getIndex(), new Date(), userId);
+            transferMapper.insert(newTransfer);
         }
         return new FileChunkResultDTO(false, uploaded);
     }
@@ -108,22 +157,28 @@ public class UploadServiceImpl implements IUploadService {
 
 
     @Override
-    public boolean mergeChunk(String fileMd5, String fileName, Integer totalChunks,Long totalSize) throws IOException {
-
+    public boolean mergeChunk(String fileMd5, String fileName, Integer totalChunks, Long totalSize) throws IOException {
+        Integer userId = UserUtil.getLoginUserId();
         if (mergeChunks(fileMd5, fileName, totalChunks)) {
-//            Integer userId= UserUtil.getLoginUserId();
-//            com.sk.netdisk.pojo.File file = new com.sk.netdisk.pojo.File(fileMd5, "url", userId, new Date(),
-//                    CommonUtils.getFileSize(totalSize), String.valueOf(totalSize));
-//            fileMapper.insert(file);
-//            //将文件添加到数据库,并且将文件id添加到redis
-//            redisUtil.hset(RedisConstants.FILE_KEY+fileMd5, "fileId", file.getId());
 
-//            Data data=new Data(fileName, renameData.getType(), targetFolderId,
-//                    renameData.getCreateTime(), renameData.getUpdateTime(), userId, renameData.getFileId());
-//            dataService.save(data);
+            com.sk.netdisk.pojo.File sourceFile = new com.sk.netdisk.pojo.File(fileMd5, "url", userId, new Date(),
+                    CommonUtils.getFileSize(totalSize), String.valueOf(totalSize));
+            fileMapper.insert(sourceFile);
+            //将文件添加到数据库,并且将文件id添加到redis
+            redisUtil.hset(RedisConstants.FILE_KEY+fileMd5, "fileId", sourceFile.getId());
+            //todo parentDataId
+            Data data=new Data(fileName, UploadUtil.getFileType(fileName), 1, new Date(), userId, sourceFile.getId());
+            dataService.save(data);
+
+            Transfer transfer=transferMapper.selectOne(new QueryWrapper<Transfer>()
+                    .eq("md5",fileMd5).eq("create_by",userId)
+                    .eq("status",TransferEnum.UPLOAD_TRANSFER.getIndex()));
+            //修改状态
+            transfer.setStatus(TransferEnum.UPLOAD_COMPLETE.getIndex());
+            transferMapper.updateById(transfer);
             //删除分块文件
             String chunkFileFolderPath = getChunkFileFolderPath(fileMd5, fileName);
-            File chunFolder=new File(chunkFileFolderPath);
+            File chunFolder = new File(chunkFileFolderPath);
             deleteDirectory(chunFolder);
             //如果redis内存不够的话,可以尝试将redis中的数据删除,然后检查是否存在这个文件,可以用数据查询
             return true;
@@ -144,7 +199,7 @@ public class UploadServiceImpl implements IUploadService {
         //获取分片存储文件夹
         String chunkFileFolderPath = getChunkFileFolderPath(fileMd5, fileName);
         //获取文件地址
-        String filePath = getFilePath(fileMd5,fileName);
+        String filePath = getFilePath(fileMd5, fileName);
         // 检查分片是否都存在于 分片存储文件夹
         if (!checkChunks(chunkFileFolderPath, totalChunks)) {
             return false;
@@ -227,6 +282,7 @@ public class UploadServiceImpl implements IUploadService {
 
     /**
      * 递归删除文件夹下所有文件 包括文件夹
+     *
      * @param directory
      */
     public static void deleteDirectory(File directory) {
@@ -252,7 +308,7 @@ public class UploadServiceImpl implements IUploadService {
      */
     private String getFilePath(String fileMd5, String filename) {
         //比如: /opt/netdisk/static/video/34420f6880b6e4467f1b0d36da3c5b44/aaa.mp4
-        return getFileFolderPath(fileMd5,filename)+filename;
+        return getFileFolderPath(fileMd5, filename) + filename;
     }
 
 

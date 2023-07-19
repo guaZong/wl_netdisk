@@ -851,7 +851,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             }
         }
         int fatherId = parentDataId != DataEnum.ZERO_FOLDER.getIndex() ? parentDataId : DataEnum.ZERO_FOLDER.getIndex();
-        return new Data(name, fileType, fatherId, new Date(), null, userId);
+        return new Data(name, fileType, fatherId, new Date(), new Date(), userId);
     }
 
     /**

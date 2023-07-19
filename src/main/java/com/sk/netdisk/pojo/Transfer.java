@@ -1,6 +1,7 @@
 package com.sk.netdisk.pojo;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -20,9 +21,9 @@ public class Transfer implements Serializable {
     private Integer id;
 
     /**
-     * 文件id
+     * 文件md5
      */
-    private Integer dataId;
+    private String md5;
 
     /**
      * 文件名字
@@ -37,6 +38,7 @@ public class Transfer implements Serializable {
     /**
      * 
      */
+    @JsonFormat(pattern = "yyyy年MM月dd日,HH:mm")
     private Date createTime;
 
     /**
@@ -53,6 +55,14 @@ public class Transfer implements Serializable {
      * 
      */
     private Integer updateBy;
+
+    public Transfer(String md5, String fileName, Integer status, Date createTime, Integer createBy) {
+        this.md5 = md5;
+        this.fileName = fileName;
+        this.status = status;
+        this.createTime = createTime;
+        this.createBy = createBy;
+    }
 
     /**
      * 

@@ -86,8 +86,17 @@ public class Data implements Serializable {
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 
+    public Data(String name, Integer type, Integer parentDataId, Date createTime, Integer createBy, Integer fileId) {
+        this.name = name;
+        this.type = type;
+        this.parentDataId = parentDataId;
+        this.createTime = createTime;
+        this.createBy = createBy;
+        this.fileId = fileId;
+    }
+
     public Data(String name, Integer type, Integer parentDataId,
-                Date createTime,Date updateTime, Integer createBy, Integer fileId) {
+                Date createTime, Date updateTime, Integer createBy, Integer fileId) {
         this.name = name;
         this.type = type;
         this.parentDataId = parentDataId;

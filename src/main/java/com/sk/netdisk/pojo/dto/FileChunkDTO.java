@@ -44,5 +44,9 @@ public class FileChunkDTO {
      * 文件名 ok
      */
     private String filename;
+    /**
+     * 父文件夹id
+     */
+    private Integer parentDataId;
 
 }
