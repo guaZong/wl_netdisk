@@ -3,12 +3,12 @@ server:
     context-path: /netDisk
   port: 1314
 
-  ip: 120.27.194.228
+  ip: **.**.**.**
 spring:
   datasource:
     username: root
-    url: jdbc:mysql://120.27.194.228:3306/sk_netdisk?useSSL=false&useUnicode=true&characterEncoding=utf8
-    password: 'Lishoujia991121.'
+    url: jdbc:mysql:/**.**.**.**:3306/sk_netdisk?useSSL=false&useUnicode=true&characterEncoding=utf8
+    password: 'password'
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.alibaba.druid.pool.DruidDataSource
   aop:
@@ -29,7 +29,7 @@ spring:
       suffix: .html
   redis:
     #redis服务器地址
-    host: 120.27.194.228
+    host: ip
     #redis服务器端口
     port: 6379
     #redis数据库索引(默认为0)
@@ -47,11 +47,11 @@ spring:
         #连接池中的最大空闲连接
         max-idle: 5
         #redis的密码
-    password: Lishoujia3301
+    password: password
   mail:
     host: smtp.qq.com
-    username: 2038605485@qq.com
-    password: yvruiywcfzwgbfaa
+    username: **@qq.com
+    password: password
     default-encoding: UTF-8
     port: 465
     properties:
@@ -68,7 +68,7 @@ spring:
             enable: true
             required: true
   rabbitmq:
-    host: 120.27.194.228
+    host: ip
     port: 5672
     username: root
     password: root
@@ -108,16 +108,16 @@ mybatis-plus:
       logic-not-delete-value: 0
       id-type: auto #id生成规则：数据库id自增,这样生成的id不是又长又乱
 aliyun:
-  url: "https://img.lovelsj.com/"
+  url: ""
   endpoint: "oss-cn-hangzhou.aliyuncs.com"
-  accessKeyId: "LTAI5t7vaYEspUPivWGw5sDP"
-  accessKeySecret: "oFvCMY5KbbZriEWxg83ZG5iluZlVMy"
-  bucketName: "lovelsj"
+  accessKeyId: ""
+  accessKeySecret: ""
+  bucketName: ""
   signName: "未来云"
-  testTemplateCode: "SMS_460615029"
-  mailTemplateCode: "SMS_256895578"
-  loginTemplateCode: "SMS_461045706"
-  finalDelTemplateCode: "SMS_461025655"
-  findPwdTemplateCode: "SMS_460935674"
+  testTemplateCode: ""
+  mailTemplateCode: ""
+  loginTemplateCode: ""
+  finalDelTemplateCode: ""
+  findPwdTemplateCode: ""
 
 domainName: "https://netdisk.lovelsj.com/"
