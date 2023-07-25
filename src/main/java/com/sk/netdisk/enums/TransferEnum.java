@@ -19,7 +19,9 @@ public enum TransferEnum {
     UPLOAD_COMPLETE(2,"上传完毕"),
     DOWNLOAD_COMPLETE(3,"下载完毕"),
     UPLOAD_CANCEL(4,"上传取消"),
-    DOWNLOAD_CANCEL(5,"下载取消")
+    DOWNLOAD_CANCEL(5,"下载取消"),
+    UPLOAD_FAIL(6,"上传失败"),
+    DOWNLOAD_FAIL(7,"下载失败"),
     ;
 
     /**
