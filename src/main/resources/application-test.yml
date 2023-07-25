@@ -11,7 +11,7 @@ spring:
   datasource:
     username: root
     url: jdbc:mysql://192.168.30.134:3307/wl_netdisk?useSSL=false&useUnicode=true&characterEncoding=utf8
-    password: 'Lishoujia991121.'
+    password: 'root'
     driver-class-name: com.mysql.cj.jdbc.Driver
     type: com.alibaba.druid.pool.DruidDataSource
   aop:
@@ -36,7 +36,7 @@ spring:
     #redis服务器端口
     port: 6379
     #redis的密码
-    password: Lishoujia3301
+    password: root
     #redis数据库索引(默认为0)
     database: 0
     #连接超时时间(毫秒)
@@ -53,8 +53,8 @@ spring:
         max-idle: 5
   mail:
     host: smtp.qq.com
-    username: 2038605485@qq.com
-    password: yvruiywcfzwgbfaa
+    username:aaaaaa@qq.com
+    password: password
     default-encoding: UTF-8
     port: 465
     properties:
@@ -114,17 +114,16 @@ mybatis-plus:
       logic-not-delete-value: 0
       id-type: auto #id生成规则：数据库id自增,这样生成的id不是又长又乱
 aliyun:
-  url: "https://img.lovelsj.com/"
-  endpoint: "oss-cn-hangzhou.aliyuncs.com"
-  accessKeyId: "LTAI5t7vaYEspUPivWGw5sDP"
-  accessKeySecret: "oFvCMY5KbbZriEWxg83ZG5iluZlVMy"
-  bucketName: "lovelsj"
+  url: ""
+  endpoint: ""
+  accessKeyId: ""
+  accessKeySecret: ""
+  bucketName: ""
   signName: "未来云"
-  testTemplateCode: "SMS_460615029"
-  mailTemplateCode: "SMS_256895578"
-  loginTemplateCode: "SMS_461045706"
-  finalDelTemplateCode: "SMS_461025655"
-  findPwdTemplateCode: "SMS_460935674"
+  testTemplateCode: ""
+  mailTemplateCode: ""
+  loginTemplateCode: ""
+  finalDelTemplateCode: ""
+  findPwdTemplateCode: ""
 
-uploadFolder: "sj/"
 domainName: "https://netdisk.lovelsj.com/"
