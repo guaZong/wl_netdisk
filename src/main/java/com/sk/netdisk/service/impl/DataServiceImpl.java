@@ -5,6 +5,7 @@ import java.util.*;
 
 import cn.hutool.core.thread.NamedThreadFactory;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.http.HttpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -41,7 +42,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -466,8 +466,10 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             targetFolder = new Data();
             targetFolder.setCreateBy(userId);
         }
+        //查找目标文件夹下的所有文件,用来判断重名或者文件夹重复问题
         List<Data> targetDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
                 .eq("parent_data_id", targetFolderDataId).eq("create_by", userId));
+
         //分别定义 返回结果集、重名的文件、重名的原文件、查找目标文件下所有子文件,用于查重名
         List<List<Data>> result = new ArrayList<>();
         List<Data> reNameList = new CopyOnWriteArrayList<>();
@@ -498,9 +500,11 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                             sourceList.add(targetDataSubData);
                             reNameList.add(copyData);
                             shouldContinue = true;
+                            //因为只有一个文件夹进行复制所以判断出来重名直接break即可
                             break;
                         }
                     }
+                    //如果没有重名进行复制操作
                     if (!shouldContinue) {
                         Data newData = new Data(copyData.getName(), copyData.getType(), targetFolderDataId,
                                 new Date(), new Date(), userId, copyData.getFileId());
@@ -529,10 +533,10 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
      *
      * @param copyData 要复制的文件
      * @param userId   操作的用户id
-     * @param copedId  复制过的文件id
+     * @param copedId  目标文件夹下新生成的与要复制文件相同  的文件id
      */
-    @Transactional
     void recurToCopy(Data copyData, Integer userId, Integer copedId) {
+        //如果复制的类型是文件夹的话
         if (copyData.getType() == DataEnum.FOLDER.getIndex()) {
             //查找要复制的文件夹所有的子文件
             List<Data> copyDataSubDataList = dataMapper.selectList(new QueryWrapper<Data>()
@@ -540,21 +544,26 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             if (copyDataSubDataList.isEmpty()) {
                 return;
             }
+            //重新定义参数
             for (Data copyDataSubData : copyDataSubDataList) {
                 copyDataSubData.setParentDataId(copedId);
                 copyDataSubData.setCreateBy(userId);
                 copyDataSubData.setCreateTime(new Date());
             }
+            //将要复制的文件夹copyData下所有文件全都在db层面生成新数据
             dataMapper.batchSaveData(copyDataSubDataList);
+            //随后查询出刚保存的所有数据带有主键id
             List<Data> getSaveList = this.list(new QueryWrapper<Data>()
                     .eq("parent_data_id", copedId));
-            List<Data> sourceCopyDataList = dataMapper.selectList(new QueryWrapper<Data>()
+            //再次查出要复制文件的所有子文件
+            List<Data> sourceCopyDataList = this.list(new QueryWrapper<Data>()
                     .eq("parent_data_id", copyData.getId()));
             List<CompletableFuture<Void>> futures = new ArrayList<>();
             for (int i = 0; i < getSaveList.size(); i++) {
                 int copyDataIndex = i;
                 int getSaveIndex = i;
-                CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() -> recurToCopy(sourceCopyDataList.get(copyDataIndex), userId, getSaveList.get(getSaveIndex).getId()));
+                CompletableFuture<Void> voidCompletableFuture = CompletableFuture.runAsync(() ->
+                        recurToCopy(sourceCopyDataList.get(copyDataIndex), userId, getSaveList.get(getSaveIndex).getId()));
                 futures.add(voidCompletableFuture);
             }
             // 等待所有 CompletableFuture 完成
@@ -651,6 +660,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
                         return;
                     }
                     dataMapper.finalDeleteData(dataId);
+                    copyToNewFolder(dataIds, targetFolderDataId);
                     recurFinalDeleteOverride(data);
                 } finally {
                     countDownLatch.countDown();
@@ -678,6 +688,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 //            default:
 //                throw new AppException(AppExceptionCodeMsg.BUSY);
 //        }
+
     }
 
     /**

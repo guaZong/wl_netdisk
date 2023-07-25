@@ -69,12 +69,13 @@ public interface DataService extends IService<Data> {
 
     /**
      * 无权限获取当前路径
-     * @param dataId dataId
-     * @param shareId shareId
+     *
+     * @param dataId   dataId
+     * @param shareId  shareId
      * @param passCode passCode
      * @return List<DataPathDto>
      */
-    List<DataPathDto> getDataPath(Integer dataId,Integer shareId,String passCode);
+    List<DataPathDto> getDataPath(Integer dataId, Integer shareId, String passCode);
 
     /**
      * 排序文件
@@ -187,12 +188,14 @@ public interface DataService extends IService<Data> {
      * @param fatherDataIds 父辈文件id集合
      * @return boolean
      */
+
     boolean judgeDataFather(Integer nowDataId, List<Integer> fatherDataIds);
 
     /**
      * 无权限获取路径和文件
-     * @param dataId dataId
-     * @param shareId shareId
+     *
+     * @param dataId   dataId
+     * @param shareId  shareId
      * @param passCode passCode
      * @return List<Object>
      */
