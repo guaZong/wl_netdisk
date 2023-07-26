@@ -44,16 +44,16 @@ public class QuickDataController {
         }
         List<Integer> dataIds = new ArrayList<>(ids);
         boolean b = quickDataService.addQuickAccess(dataIds);
-        return ResponseResult.success(b);
+        return ResponseResult.success();
     }
 
     @ApiOperation(value = "删除快捷访问")
     @DeleteMapping("/delQuickAccess/{quickId}")
-    public ResponseResult delQuickAccess(@PathVariable  Integer quickId) {
+    public ResponseResult delQuickAccess(@PathVariable Integer quickId) {
         if (Objects.isNull(quickId)) {
             throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
         }
         boolean b = quickDataService.delQuickAccess(quickId);
-        return ResponseResult.success(b);
+        return b ? ResponseResult.success() : ResponseResult.error(AppExceptionCodeMsg.BUSY);
     }
 }
