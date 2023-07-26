@@ -19,6 +19,7 @@ public enum AppExceptionCodeMsg {
     INVALID_CODE(10004,"手机验证码错误"),
     NULL_VALUE(10005,"请将数据填写完整"),
     SERVER_EXCEPTION(10006,"系统异常"),
+    SERVER_ERR(10007,"系统错误"),
 
 
     //用户类相关异常
