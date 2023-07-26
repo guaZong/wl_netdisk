@@ -9,7 +9,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 
-import com.sk.netdisk.constant.RabbitmqConstants;
 import com.sk.netdisk.enums.AppExceptionCodeMsg;
 import com.sk.netdisk.enums.DataEnum;
 import com.sk.netdisk.exception.AppException;
