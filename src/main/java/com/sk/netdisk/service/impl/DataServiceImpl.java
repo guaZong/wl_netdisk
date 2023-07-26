@@ -5,7 +5,6 @@ import java.util.*;
 
 import cn.hutool.core.thread.NamedThreadFactory;
 import cn.hutool.core.util.RandomUtil;
-import cn.hutool.http.HttpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -70,20 +69,16 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
 
     private final ExecutorService recurHelpThreadPool;
 
+    private final ShareMapper shareMapper;
+
     @Autowired
     DataShareService dataShareService;
-
-    @Autowired
-    ShareMapper shareMapper;
-
-    @Autowired
-    UploadUtil uploadUtil;
 
 
     @Autowired
     public DataServiceImpl(DataMapper dataMapper, RedisUtil redisUtil,
                            DataDelService dataDelService, OSSUtil ossUtil,
-                           FileMapper fileMapper, RabbitTemplate rabbitTemplate) {
+                           FileMapper fileMapper, RabbitTemplate rabbitTemplate, ShareMapper shareMapper) {
         ThreadFactory namedThreadFactory1 = new NamedThreadFactory("DataServiceImpl", false);
         nowServiceThreadPool = new ThreadPoolExecutor(24, 24, 0,
                 TimeUnit.SECONDS, new LinkedBlockingDeque<>(), namedThreadFactory1);
@@ -97,6 +92,7 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
         this.ossUtil = ossUtil;
         this.fileMapper = fileMapper;
         this.rabbitTemplate = rabbitTemplate;
+        this.shareMapper = shareMapper;
     }
 
 
@@ -568,9 +564,6 @@ public class DataServiceImpl extends ServiceImpl<DataMapper, Data>
             }
             // 等待所有 CompletableFuture 完成
             CompletableFuture.allOf(futures.toArray(new CompletableFuture[0])).join();
-        } else {
-            rabbitTemplate.convertAndSend(RabbitmqConstants.FILE_EXCHANGE,
-                    RabbitmqConstants.BIND_ADD_FILE_MD5, copyData.getFileId());
         }
     }
 
