@@ -4,7 +4,6 @@ import com.sk.netdisk.controller.request.GeneralRequest;
 import com.sk.netdisk.enums.AppExceptionCodeMsg;
 import com.sk.netdisk.enums.DataEnum;
 import com.sk.netdisk.exception.AppException;
-import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.pojo.dto.DataPathDto;
 import com.sk.netdisk.service.DataService;

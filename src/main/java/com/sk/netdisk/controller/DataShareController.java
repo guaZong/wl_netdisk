@@ -3,7 +3,6 @@ package com.sk.netdisk.controller;
 import com.sk.netdisk.controller.request.GeneralRequest;
 import com.sk.netdisk.enums.AppExceptionCodeMsg;
 import com.sk.netdisk.exception.AppException;
-import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.DataShare;
 import com.sk.netdisk.pojo.dto.ShareInfoDto;
 import com.sk.netdisk.service.DataShareService;
