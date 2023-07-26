@@ -44,7 +44,7 @@ public class QuickDataController {
         }
         List<Integer> dataIds = new ArrayList<>(ids);
         boolean b = quickDataService.addQuickAccess(dataIds);
-        return ResponseResult.success();
+        return b ? ResponseResult.success() : ResponseResult.error(AppExceptionCodeMsg.BUSY);
     }
 
     @ApiOperation(value = "删除快捷访问")
