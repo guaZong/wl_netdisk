@@ -29,6 +29,8 @@ public interface QuickDataMapper extends BaseMapper<QuickData> {
      * @return List<QuickData>
      */
     List<QuickData> findUserIdAndDataIdByIdList(List<Integer> dataIds,Integer userId);
+
+
 }
 
 
