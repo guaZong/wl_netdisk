@@ -18,6 +18,7 @@ public enum AppExceptionCodeMsg {
     UPLOAD_FILE_IS_NULL(10003,"上传的文件为空"),
     INVALID_CODE(10004,"手机验证码错误"),
     NULL_VALUE(10005,"请将数据填写完整"),
+    SERVER_EXCEPTION(10006,"系统异常"),
 
 
     //用户类相关异常
