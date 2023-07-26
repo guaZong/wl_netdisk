@@ -82,7 +82,10 @@ public class RabbitListenerMethods {
     @Value("${aliyun.loginTemplateCode}")
     private String loginTemplateCode;
 
-
+    /**
+     * 发送登陆注册手机验证码
+     * @param rabbitCodeVO 接收包
+     */
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(name = "loginPhoneCodeQueue"),
             exchange = @Exchange(name = RabbitmqConstants.CODE_EXCHANGE, type = "topic"),
@@ -95,6 +98,10 @@ public class RabbitListenerMethods {
         log.info("{} 登录验证码: {}", phoneNumber, code);
     }
 
+    /**
+     * 发送找回密码的手机验证码
+     * @param rabbitCodeVO 接收包
+     */
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(name = "findPwdCodeQueue"),
             exchange = @Exchange(name = RabbitmqConstants.CODE_EXCHANGE, type = "topic"),
@@ -107,7 +114,10 @@ public class RabbitListenerMethods {
         log.info("{} 找回密码验证码: {}", phoneNumber, code);
     }
 
-
+    /**
+     * 发送绑定邮箱的手机验证码
+     * @param rabbitCodeVO
+     */
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(name = "bindEmailCodeQueue"),
             exchange = @Exchange(name = RabbitmqConstants.CODE_EXCHANGE, type = "topic"),
@@ -122,7 +132,10 @@ public class RabbitListenerMethods {
         log.info("{} 邮箱绑定验证码: {}", email, code);
     }
 
-
+    /**
+     * 发送删除回收站的手机验证码
+     * @param rabbitCodeVO 接受包
+     */
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(name = "bindPhoneDelCodeQueue"),
             exchange = @Exchange(name = RabbitmqConstants.CODE_EXCHANGE, type = "topic"),
@@ -135,17 +148,11 @@ public class RabbitListenerMethods {
         log.info("{} 删除回收站验证码: {}", phoneNumber, code);
     }
 
-//    @RabbitListener(bindings = @QueueBinding(
-//            value = @Queue(name = "bindAddFileMd5Queue"),
-//            exchange = @Exchange(name = RabbitmqConstants.FILE_EXCHANGE, type = "topic"),
-//            key = {RabbitmqConstants.BIND_ADD_FILE_MD5})
-//    )
-//    public void bindAddFileMd5(Integer fileId) {
-//        String md5 = fileMapper.selectById(fileId).getMd5();
-//        redisUtil.hincr(RedisConstants.FILE_KEY + md5, "useNum", 1);
-//    }
 
-
+    /**
+     * 死信队列+ddl实现的延迟队列,实现回收站三十天后自动删除
+     * @param dataDelId 回收站被删除文件id
+     */
     @RabbitListener(bindings = @QueueBinding(
             value = @Queue(name = RabbitmqConstants.QUEUE_DLX),
             exchange = @Exchange(name = RabbitmqConstants.EXCHANGE_DLX, type = "topic"),
