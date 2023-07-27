@@ -2,6 +2,7 @@ package com.sk.netdisk.mapper;
 
 import com.sk.netdisk.pojo.ShareDetail;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Mapper;
 
 /**
 * @author lsj
@@ -9,6 +10,7 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 * @createDate 2023-07-27 13:35:29
 * @Entity com.sk.netdisk.pojo.ShareDetail
 */
+@Mapper
 public interface ShareDetailMapper extends BaseMapper<ShareDetail> {
 
 }

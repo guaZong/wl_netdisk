@@ -9,11 +9,11 @@
             <result property="lookNum" column="look_num" jdbcType="INTEGER"/>
             <result property="saveNum" column="save_num" jdbcType="INTEGER"/>
             <result property="downloadNum" column="download_num" jdbcType="INTEGER"/>
-            <result property="dataHareId" column="data_hare_id" jdbcType="INTEGER"/>
+            <result property="dataHareId" column="data_share_id" jdbcType="INTEGER"/>
     </resultMap>
 
     <sql id="Base_Column_List">
         id,look_num,save_num,
-        download_num,data_hare_id
+        download_num,data_share_id
     </sql>
 </mapper>
