@@ -7,7 +7,7 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import java.util.List;
 
 /**
-* @author Administrator
+* @author lsj
 * @description 针对表【quick_data】的数据库操作Service
 * @createDate 2023-05-23 09:22:35
 */

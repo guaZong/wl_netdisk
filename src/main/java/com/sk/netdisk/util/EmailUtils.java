@@ -8,7 +8,11 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
 import javax.mail.internet.MimeMessage;
-
+/**
+ * @author lsj
+ * @description  邮箱工具类
+ *
+ */
 @Slf4j
 @Component
 public class EmailUtils {
@@ -20,7 +24,7 @@ public class EmailUtils {
     private String sendUser;
 
 
-    public  String  sendEmail(String toUser,String temp,String subject){
+    public  String sendEmail(String toUser,String temp,String subject){
         MimeMessage message = javaMailSender.createMimeMessage();
         try {
             MimeMessageHelper mimeMessageHelper = new MimeMessageHelper(message, false);

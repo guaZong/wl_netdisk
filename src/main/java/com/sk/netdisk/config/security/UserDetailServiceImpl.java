@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  *
- * @author Administrator
+ * @author lsj
  */
 @Service("UserDetailServiceImpl")
 public class UserDetailServiceImpl implements UserDetailsService {

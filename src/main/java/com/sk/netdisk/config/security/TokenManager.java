@@ -12,7 +12,10 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-
+/**
+ * @author lsj
+ * @description tokenmanager
+ */
 @Slf4j
 @Component
 public class TokenManager {

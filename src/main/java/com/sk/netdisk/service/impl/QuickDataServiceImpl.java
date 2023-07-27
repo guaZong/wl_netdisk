@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * @author Administrator
+ * @author lsj
  * @description 针对表【quick_data】的数据库操作Service实现
  * @createDate 2023-05-23 09:22:35
  */

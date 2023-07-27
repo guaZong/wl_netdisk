@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 传输接口
+ * 传输API
  * @author lsj
  */
 @RestController

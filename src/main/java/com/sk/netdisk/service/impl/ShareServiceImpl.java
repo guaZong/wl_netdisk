@@ -7,7 +7,7 @@ import com.sk.netdisk.mapper.ShareMapper;
 import org.springframework.stereotype.Service;
 
 /**
-* @author Administrator
+* @author lsj
 * @description 针对表【share】的数据库操作Service实现
 * @createDate 2023-05-14 08:46:56
 */

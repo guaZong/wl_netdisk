@@ -8,7 +8,7 @@ import java.io.Serializable;
 import lombok.Data;
 
 /**
- * 
+ * @author lsj
  * @TableName transfer_position
  */
 @TableName(value ="transfer_position")

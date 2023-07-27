@@ -28,6 +28,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        //访问网址路径自动跳转访问服务地址
         registry.addResourceHandler("/view/**").addResourceLocations("file:"+filePath+"view/");
         registry.addResourceHandler("/img/**").addResourceLocations("file:"+filePath+"img/");
         registry.addResourceHandler("/video/**").addResourceLocations("file:"+filePath+"video/");

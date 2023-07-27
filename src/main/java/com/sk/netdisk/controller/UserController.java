@@ -17,7 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 用户API
- * @author Administrator
+ * @author lsj
  */
 @RequestMapping("/sysUser")
 @RestController

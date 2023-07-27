@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 /**
-* @author Administrator
+* @author lsj
 * @description 针对表【share】的数据库操作Mapper
 * @createDate 2023-05-14 08:46:56
 * @Entity com.sk.netdisk.pojo.Share

@@ -18,7 +18,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * redisTemplate封装
- *
+ * @author lsj
  */
 @Component
 @Slf4j

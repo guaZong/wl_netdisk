@@ -11,7 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 /**
  * 用户工具类
  *
- * @author Administrator
+ * @author lsj
  */
 @Slf4j
 public class UserUtil {

@@ -25,9 +25,9 @@ import java.util.Objects;
 
 
 /**
- * 无需认证接口
+ * 无需认证API
  *
- * @author Administrator
+ * @author lsj
  */
 @RestController
 //@CrossOrigin

@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service;
 import java.util.UUID;
 
 /**
-* @author Administrator
+* @author lsj
 * @description 针对表【file】的数据库操作Service实现
 * @createDate 2023-05-04 22:05:26
 */

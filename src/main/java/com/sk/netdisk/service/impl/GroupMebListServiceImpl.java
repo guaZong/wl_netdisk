@@ -8,7 +8,7 @@ import com.sk.netdisk.service.GroupMebListService;
 import org.springframework.stereotype.Service;
 
 /**
-* @author Administrator
+* @author lsj
 * @description 针对表【group_meb_list】的数据库操作Service实现
 * @createDate 2022-11-29 10:50:12
 */

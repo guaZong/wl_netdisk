@@ -11,7 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 
+ * @author lsj
  * @TableName quick_data
  */
 @TableName(value ="quick_data")

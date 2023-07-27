@@ -13,6 +13,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+/**
+ * @author lsj
+ * 手机验证码登录的security实习类
+ */
 @Data
 @AllArgsConstructor
 @NoArgsConstructor

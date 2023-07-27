@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
-* @author Administrator
+* @author lsj
 * @description 针对表【data_del】的数据库操作Service实现
 * @createDate 2023-05-03 15:28:35
 */

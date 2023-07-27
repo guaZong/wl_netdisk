@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 /**
-* @author Administrator
+* @author lsj
 * @description 针对表【quick_data】的数据库操作Mapper
 * @createDate 2023-05-23 09:22:35
 * @Entity com.sk.netdisk.pojo.QuickData

@@ -9,7 +9,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 
+ * @author lsj
  * @TableName group_meb_list
  */
 @TableName(value ="group_meb_list")

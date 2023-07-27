@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Mapper;
 import java.util.List;
 
 /**
-* @author Administrator
+* @author lsj
 * @description 针对表【data_del】的数据库操作Mapper
 * @createDate 2023-05-03 15:28:35
 * @Entity com.sk.netdisk.pojo.DataDel

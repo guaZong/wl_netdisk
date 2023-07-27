@@ -7,7 +7,11 @@ import com.sk.netdisk.pojo.dto.FileChunkResultDTO;
 
 import java.io.IOException;
 
-
+/**
+ * @author lsj
+ * @description 上传service
+ *
+ */
 public interface IUploadService {
 
     /**

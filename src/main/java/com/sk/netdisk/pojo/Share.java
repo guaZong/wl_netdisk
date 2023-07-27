@@ -11,7 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 
+ * @author lsj
  * @TableName share
  */
 @TableName(value ="share")

@@ -25,7 +25,7 @@ import java.util.Objects;
 /**
  * OSS工具类
  *
- * @author 11921
+ * @author lsj
  */
 @Component
 public class OSSUtil {

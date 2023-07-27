@@ -21,7 +21,7 @@ import java.util.Set;
 /**
  * http://localhost:1314/netDisk/swagger-ui/index.html#/
  * Swagger config
- * @author 栗守佳
+ * @author lsj
  */
 public class Swagger {
 
@@ -50,8 +50,8 @@ public class Swagger {
 
     private ApiInfo apiInfo() {
         return new ApiInfoBuilder()
-                .title("守佳网盘API")
-                .description("守佳网盘API")
+                .title("未来网盘API")
+                .description("未来网盘API")
                 .version("1.0")
                 .contact(new Contact(
                         "skNetDisk",
