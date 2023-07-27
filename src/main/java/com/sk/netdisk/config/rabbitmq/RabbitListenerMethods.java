@@ -1,17 +1,12 @@
 package com.sk.netdisk.config.rabbitmq;
 
 
-import com.sk.netdisk.constant.RedisConstants;
-import com.sk.netdisk.enums.AppExceptionCodeMsg;
-import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.mapper.DataDelMapper;
 import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.FileMapper;
 import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.DataDel;
 import com.sk.netdisk.pojo.vo.RabbitCodeVO;
-import com.sk.netdisk.service.DataDelService;
-import com.sk.netdisk.service.DataService;
 import com.sk.netdisk.service.impl.DataDelServiceImpl;
 import com.sk.netdisk.service.impl.DataServiceImpl;
 import com.sk.netdisk.util.EmailUtils;
@@ -19,7 +14,6 @@ import com.sk.netdisk.util.Redis.RedisUtil;
 import com.sk.netdisk.util.SendSmsUtil;
 import com.sk.netdisk.constant.RabbitmqConstants;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.http.MessageConstraintException;
 import org.springframework.amqp.rabbit.annotation.Exchange;
 import org.springframework.amqp.rabbit.annotation.Queue;
 import org.springframework.amqp.rabbit.annotation.QueueBinding;
@@ -167,12 +161,15 @@ public class RabbitListenerMethods {
                 if (data == null) {
                     return;
                 }
+                //彻底删除当前文件
                 dataMapper.finalDelData(dataId);
+                //彻底删除当前文件的子文件
                 dataDelService.recurCountFinalDelete(data);
+                //删除回收站这条记录
                 dataDelService.removeById(dataDelId);
             }
         } catch (Exception e) {
-            throw new MessageConversionException("消息消费失败，移出消息队列，不再试错");
+            throw new MessageConversionException("消息消费失败");
         }
 
     }

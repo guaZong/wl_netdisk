@@ -31,17 +31,6 @@ public class RabbitmqConstants {
      */
     public static final String BIND_FINAL_DEL_KEY="finalDel.bind";
 
-    /**
-     * 文件处理交换机 rabbitmq exchange
-     */
-    public static final String FILE_EXCHANGE ="FileExchange";
-
-    /**
-     * 交换机绑定手机发送删除回收站验证码  rabbitmq routing
-     */
-    public static final String BIND_ADD_FILE_MD5="addMd5.bind";
-
-
     public static final String EXCHANGE_DLX="dlx_exchange";
 
     public static final String QUEUE_DLX="dlx_queue";
