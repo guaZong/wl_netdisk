@@ -15,5 +15,9 @@ public interface ShareDetailService extends IService<ShareDetail> {
      */
     void createShareDetail(Integer dataShareId);
 
-
+    /**
+     * 删除分享详细信息
+     * @param dataShareId 分享id
+     */
+    void deleteShareDetail(Integer dataShareId);
 }
