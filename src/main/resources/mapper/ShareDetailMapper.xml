@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sk.netdisk.mapper.ShareDetailMapper">
+
+    <resultMap id="BaseResultMap" type="com.sk.netdisk.pojo.ShareDetail">
+            <id property="id" column="id" jdbcType="INTEGER"/>
+            <result property="lookNum" column="look_num" jdbcType="INTEGER"/>
+            <result property="saveNum" column="save_num" jdbcType="INTEGER"/>
+            <result property="downloadNum" column="download_num" jdbcType="INTEGER"/>
+            <result property="dataHareId" column="data_hare_id" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,look_num,save_num,
+        download_num,data_hare_id
+    </sql>
+</mapper>
