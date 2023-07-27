@@ -14,25 +14,24 @@ import com.sk.netdisk.enums.DataEnum;
 import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.DataShareMapper;
+import com.sk.netdisk.mapper.ShareDetailMapper;
 import com.sk.netdisk.mapper.ShareMapper;
 import com.sk.netdisk.pojo.*;
 import com.sk.netdisk.pojo.dto.DataDetInfoDto;
 import com.sk.netdisk.pojo.dto.ShareInfoDto;
 import com.sk.netdisk.service.DataService;
 import com.sk.netdisk.service.DataShareService;
+import com.sk.netdisk.service.ShareDetailService;
 import com.sk.netdisk.util.CommonUtils;
 import com.sk.netdisk.util.Redis.RedisUtil;
 import com.sk.netdisk.util.UserUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.redis.core.HashOperations;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * @author lsj
@@ -49,8 +48,6 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
 
     final private ThreadPoolExecutor nowServiceThreadPool;
 
-    final private RedisTemplate<String, Integer> redisTemplate;
-
     final private DataShareMapper dataShareMapper;
 
     final private ShareMapper shareMapper;
@@ -59,18 +56,21 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
 
     final private DataServiceImpl dataServiceImpl;
 
+    private final ShareDetailService shareDetailService;
+
     @Value("${domainName}")
     private String domainName;
 
 
     @Autowired
-    public DataShareServiceImpl(DataMapper dataMapper, RedisUtil redisUtil, RedisTemplate redisTemplate,
-                                DataShareMapper dataShareMapper, ShareMapper shareMapper, DataService dataService, DataServiceImpl dataServiceImpl) {
-        this.redisTemplate = redisTemplate;
+    public DataShareServiceImpl(DataMapper dataMapper, RedisUtil redisUtil, DataShareMapper dataShareMapper,
+                                ShareMapper shareMapper, DataService dataService, DataServiceImpl dataServiceImpl,
+                                ShareDetailService shareDetailService) {
         this.dataShareMapper = dataShareMapper;
         this.shareMapper = shareMapper;
         this.dataService = dataService;
         this.dataServiceImpl = dataServiceImpl;
+        this.shareDetailService = shareDetailService;
         ThreadFactory namedThreadFactory = new NamedThreadFactory("DateShareServiceImpl", false);
         nowServiceThreadPool = new ThreadPoolExecutor(24, 24, 0,
                 TimeUnit.SECONDS, new LinkedBlockingDeque<>(), namedThreadFactory);
@@ -80,13 +80,17 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
 
     @Override
     @Transactional
-    public DataShare createShareFile(List<Integer> dataIds, String passCode,
-                                     Integer accessNum, Integer accessStatus, Integer expireDays) {
+    public DataShare createShareFile(List<Integer> dataIds, String passCode, Integer accessNum,
+                                     Integer accessStatus, Integer expireDays) {
+
         Integer userId = UserUtil.getLoginUserId();
         List<Data> dataList = dataMapper.selectBatchIds(dataIds);
+        if (dataList.isEmpty()) {
+            throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
+        }
         List<Share> shareList = new ArrayList<>();
         for (Data data : dataList) {
-            if (dataList.isEmpty()) {
+            if (Objects.isNull(data)) {
                 throw new AppException(AppExceptionCodeMsg.DATA_NOT_EXISTS);
             }
             if (!userId.equals(data.getCreateBy())) {
@@ -97,22 +101,27 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
             shareList.add(share);
         }
         passCode = StringUtils.isEmpty(passCode) ? "" : passCode;
+        //创建分享uuid
         String randomKey = "_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ123456789-";
         String uuid = RandomUtil.randomString(randomKey, 25);
+        //创建分享链接
         String link = domainName + "sysShare/" + uuid;
+
         DataShare dataShare;
+        //如果分享限制人数
         if (accessStatus == DataEnum.SHARE_IS_LIMIT.getIndex()) {
             if (Objects.isNull(accessNum) || accessNum == 0) {
                 throw new AppException(AppExceptionCodeMsg.NULL_VALUE);
             }
-            dataShare = new DataShare(uuid, passCode, accessNum, DataEnum.SHARE_IS_LIMIT.getIndex(),
-                    new Date(), userId, expireDays);
+            dataShare = new DataShare(uuid, passCode, accessNum, DataEnum.SHARE_IS_LIMIT.getIndex(), new Date(), userId, expireDays);
         } else if (accessStatus == DataEnum.SHARE_NO_LIMIT.getIndex()) {
-            dataShare = new DataShare(uuid, passCode, DataEnum.SHARE_NO_LIMIT.getIndex(),
-                    new Date(), userId, expireDays);
+            //如果不限制人数
+            dataShare = new DataShare(uuid, passCode, DataEnum.SHARE_NO_LIMIT.getIndex(), new Date(), userId, expireDays);
         } else {
+            //如果状态不正确
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
+        //db生成分享文件数据
         this.save(dataShare);
         for (Share share : shareList) {
             share.setShareId(dataShare.getId());
@@ -121,12 +130,10 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         shareMapper.batchSaveShare(shareList);
-        nowServiceThreadPool.execute(() -> {
-            createShareRedis(dataShare.getId());
-            if (expireDays != DataEnum.SHARE_IS_BOUNDLESS.getIndex()) {
-                //todo 如果expireDays不是-1就把他放入延迟队列中去
-            }
-        });
+        shareDetailService.createShareDetail(dataShare.getId());
+        if (expireDays != DataEnum.SHARE_IS_BOUNDLESS.getIndex()) {
+            //todo 如果expireDays不是-1就把他放入延迟队列中去
+        }
         dataShare.setDataIds(new HashSet<>(dataIds));
         dataShare.setLink(link);
         return dataShare;
@@ -141,12 +148,11 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         if (!userId.equals(dataShare.getCreateBy())) {
             throw new AppException(AppExceptionCodeMsg.INVALID_PERMISSION);
         }
-        redisUtil.del(RedisConstants.SHARE_KEY + shareId);
         if (dataShare.getExpireDays() != DataEnum.SHARE_IS_BOUNDLESS.getIndex()) {
             //todo 如果expireDays不是-1就删除延迟队列里的数据
         }
         shareMapper.deleteByShareId(shareId);
-        redisUtil.del(RedisConstants.SHARE_KEY + shareId);
+        shareDetailService.deleteShareDetail(dataShare.getId());
         dataShareMapper.deleteById(shareId);
     }
 
@@ -178,21 +184,11 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
     public List<ShareInfoDto> traverseShares() {
         Integer userId = UserUtil.getLoginUserId();
         List<ShareInfoDto> shareInfoDtoList = dataShareMapper.traverseShares(userId);
-        HashOperations<String, String, Integer> hashOperations = redisTemplate.opsForHash();
         CountDownLatch countDownLatch = new CountDownLatch(shareInfoDtoList.size());
         for (ShareInfoDto shareInfo : shareInfoDtoList) {
             nowServiceThreadPool.execute(() -> {
                 try {
-                    List<Integer> dataIds = shareMapper.selectIdsByShareId(shareInfo.getId());
-                    Map<String, Integer> redisMap = hashOperations.entries(RedisConstants.SHARE_KEY + shareInfo.getId());
-                    Integer lookNum = redisMap.get("lookNum");
-                    Integer saveNum = redisMap.get("saveNum");
-                    Integer downloadNum = redisMap.get("downloadNum");
-                    Integer shareNum = redisMap.get("shareNum");
-                    shareInfo.setShareNum(shareNum);
-                    shareInfo.setLookNum(lookNum);
-                    shareInfo.setSaveNum(saveNum);
-                    shareInfo.setDownloadNum(downloadNum);
+                    List<Integer> dataIds = shareMapper.selectIdsByShareId(shareInfo.getDataShareId());
                     shareInfo.setLink(getLink(shareInfo.getLink()));
                     shareInfo.setDataIds(dataIds);
                     shareInfo.setNameList(dataMapper.findNameByIds(dataIds));
@@ -224,18 +220,20 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         if (userId.equals(dataShare.getCreateBy())) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
-        String redisKey = RedisConstants.SHARE_KEY + shareId;
+        //todo 此处并发安全有问题,多个并发操作同时保存会出问题,这里需要上锁
         if (dataShare.getAccessStatus() == DataEnum.SHARE_IS_LIMIT.getIndex()) {
-            Object shareNum = redisUtil.hget(redisKey, "shareNum");
-            if (!Objects.isNull(shareNum) && (int) shareNum > dataShare.getAccessNum()) {
-                //todo 分享人数到达上限进行删除或者修改操作
+            ShareDetail shareDetail = shareDetailService.getShareDetailInfo(shareId);
+            Integer shareNum = shareDetail.getSaveNum();
+            if (!Objects.isNull(shareNum) &&  shareNum > dataShare.getAccessNum()) {
+                //todo 分享(保存)人数到达上限进行删除或者修改操作
                 throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
             }
         }
         List<List<Data>> result = dataService.copyToNewFolder(dataIds, targetFolderId);
+        //如果没有重名直接保存
         if (result.get(0).isEmpty()) {
-            redisUtil.hincr(redisKey, "saveNum", 1);
-            return;
+           shareDetailService.addSaveNum(shareId);
+           return;
         }
         //如果出现重名情况，首先获取result重名的文件
         List<Data> reNameDataList = result.get(0);
@@ -256,7 +254,7 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         }
         try {
             countDownLatch.await();
-            redisUtil.hincr(redisKey, "saveNum", 1);
+            shareDetailService.addSaveNum(shareId);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -264,6 +262,7 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
 
     @Override
     public List<DataDetInfoDto> getShareData(String uuid, String passCode) {
+        //获取该分享的一些信息
         DataShare dataShare = this.getOne(new QueryWrapper<DataShare>().eq("link", uuid));
         if (Objects.isNull(dataShare) || dataShare.getAccessStatus() == DataEnum.SHARE_IS_EXPIRE.getIndex()) {
             throw new AppException(AppExceptionCodeMsg.SHARE_INVALID);
@@ -282,10 +281,12 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
         List<DataDetInfoDto> dataList = dataMapper.findDataByIds(dataIds);
         if (dataList.isEmpty()) {
             this.update(new DataShare(), new UpdateWrapper<DataShare>()
-                    .set("access_status", DataEnum.SHARE_IS_DELETE.getIndex()).eq("id", dataShare.getId()));
+                    .set("access_status", DataEnum.SHARE_IS_DELETE.getIndex())
+                    .eq("id", dataShare.getId())
+                    .ne("access_status",DataEnum.SHARE_IS_DELETE.getIndex()));
             throw new AppException(AppExceptionCodeMsg.SHARE_IS_DELETE);
         }
-        redisUtil.hincr(RedisConstants.SHARE_KEY + dataShare.getId(), "lookNum", 1);
+        shareDetailService.addLookNum(dataShare.getId());
         return dataList;
     }
 
@@ -338,25 +339,6 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
                     .set("access_status", DataEnum.SHARE_IS_DELETE.getIndex())
                     .eq("id", dataShareId));
         }
-    }
-
-
-    /**
-     * 创建分享文件相关redis
-     *
-     * @param shareId shareId
-     */
-    private void createShareRedis(Integer shareId) {
-        //redis key
-        String key = RedisConstants.SHARE_KEY + shareId;
-        //查看次数
-        redisUtil.hset(key, "lookNum", 0);
-        //分享次数
-        redisUtil.hset(key, "shareNum", 0);
-        //保存次数
-        redisUtil.hset(key, "saveNum", 0);
-        //下载次数
-        redisUtil.hset(key, "downloadNum", 0);
     }
 
     /**
