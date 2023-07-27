@@ -41,7 +41,7 @@ public class ShareDetailServiceImpl extends ServiceImpl<ShareDetailMapper, Share
     public void deleteShareDetail(Integer dataShareId) {
         QueryWrapper<ShareDetail> shareDetailQueryWrapper = new QueryWrapper<ShareDetail>().eq("data_share_id", dataShareId);
         ShareDetail detail = this.getOne(shareDetailQueryWrapper);
-        if (detail != null) {
+        if (detail == null) {
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         this.remove(shareDetailQueryWrapper);
