@@ -34,8 +34,14 @@
                ds.create_by,
                ds.expire_days,
                ds.access_num,
-               ds.access_status
+               ds.access_status,
+               sd.look_num,
+               sd.save_num,
+               sd.download_num
         from `data_share` ds
+                inner join share_detail sd on
+                sd.data_share_id=ds.id
+
         where ds.is_delete = 0
           and ds.create_by = #{userId}
     </select>
