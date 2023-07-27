@@ -1,6 +1,7 @@
 package com.sk.netdisk.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.sk.netdisk.enums.AppExceptionCodeMsg;
 import com.sk.netdisk.exception.AppException;
@@ -44,6 +45,31 @@ public class ShareDetailServiceImpl extends ServiceImpl<ShareDetailMapper, Share
             throw new AppException(AppExceptionCodeMsg.BUSY);
         }
         this.remove(shareDetailQueryWrapper);
+    }
+
+
+    @Override
+    public boolean addLookNum(Integer dataShareId) {
+        return this.update(new UpdateWrapper<ShareDetail>().setSql("look_num=look_num+1")
+                .eq("data_share_id", dataShareId));
+    }
+
+    @Override
+    public boolean addSaveNum(Integer dataShareId) {
+        return this.update(new UpdateWrapper<ShareDetail>().setSql("save_num=save_num+1")
+                .eq("data_share_id", dataShareId));
+    }
+
+    @Override
+    public boolean addDownLoadNum(Integer dataShareId) {
+        return this.update(new UpdateWrapper<ShareDetail>().setSql("download_num=download_num+1")
+                .eq("data_share_id", dataShareId));
+    }
+
+    @Override
+    public ShareDetail getShareDetailInfo(Integer dataShareId) {
+        QueryWrapper<ShareDetail> shareDetailQueryWrapper = new QueryWrapper<ShareDetail>().eq("data_share_id", dataShareId);
+        return this.getOne(shareDetailQueryWrapper);
     }
 
 }
