@@ -5,7 +5,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * @author Administrator
+ * 计算文件详细信息
+ * @author lsj
  */
 @Data
 @AllArgsConstructor
