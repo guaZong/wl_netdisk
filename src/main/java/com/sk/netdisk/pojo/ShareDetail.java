@@ -5,7 +5,10 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
+
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * @author lsj
@@ -13,6 +16,8 @@ import lombok.Data;
  */
 @TableName(value ="share_detail")
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class ShareDetail implements Serializable {
     /**
      * 
@@ -38,7 +43,7 @@ public class ShareDetail implements Serializable {
     /**
      * 
      */
-    private Integer dataHareId;
+    private Integer dataShareId;
 
     @TableField(exist = false)
     private static final long serialVersionUID = 1L;

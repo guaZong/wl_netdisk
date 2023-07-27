@@ -9,5 +9,11 @@ import com.baomidou.mybatisplus.extension.service.IService;
 * @createDate 2023-07-27 13:35:29
 */
 public interface ShareDetailService extends IService<ShareDetail> {
+    /**
+     * 创建分享详细信息
+     * @param dataShareId 分享id
+     */
+    void createShareDetail(Integer dataShareId);
+
 
 }
