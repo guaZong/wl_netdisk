@@ -1,5 +1,5 @@
 # 未来网盘
-
+## 目前正在开发中.....
 - 未来网盘后端代码仓库,前端仓库地址:
 
 - 本网盘适用人群:私人合作团队,家庭版网盘
@@ -9,13 +9,14 @@
 ## 项目介绍
 
 - 技术栈:
-  - 框架: SpirngBoot 、SpringMVC 、SpringSecurity 、Mybatis 、Mybatis-plus、Netty
+  - 框架: SpringCloud、SpringBoot 、SpringMVC 、SpringSecurity 、Mybatis 、Mybatis-plus、Netty
   - 数据库: Mysql 、Redis
   - 消息队列: RabbitMQ
   - 搜索引擎: ElasticSearch
+  - 存储: HDFS分布式存储
 - 项目配合使用其他工具
-  - 接口测试工具: Apifox (如有兴趣进入该项目接口   请点击链接【Apifox】守佳邀请你加入守佳网盘 https://www.apifox.cn/web/invite?token=UmWaC46A9PafPmO9LkuIo)
-  - 部署工具: nginx进行反向代理以及部署前端react打包代码、shell脚本以及systemd一键部署
+  - 接口测试工具: Apifox (如有兴趣查看该项目接口(只读)   guaZong 在 Apifox 中邀请你加入团队 未来网盘 https://app.apifox.com/invite?token=lYd_EHT66K6nCTueYdM4D)
+  - 部署工具: nginx集群进行反向代理以及部署前端react打包代码、shell脚本以及systemd一键部署
   - 环境配置: docker一键配置环境
 
 - 项目用途
@@ -29,34 +30,15 @@
 ### springboot项目安装使用
 
 - 编写application.yml,将mysql,redis,rabbitmq,elasticsearch等信息填写完毕,随后填写阿里云相关信息
-- shell脚本部署 ,环境配置, i您光临啊实打实的
-
-​
-
-## 示例 提供项目的使用示例或代码片段。
-
-
-
-## 贡献 说明如何参与项目的贡献，包括如何提交问题、建议和代码等。
-
-
-
-## 版权和许可 指明项目的版权信息和许可协议。
-
-
-
-## 参考资料 列出项目相关的参考资料、文档链接等。
-
-
-
+- shell脚本部署 ,环境配置
+- 选择存储方式
+  - 单机服务存储,简单方便
+  - HDFS存储,高可用,存储大文件
+  
 ## 功能说明
 
 ### 文件模块
 
-### IM聊天模块
+### 聊天模块
 
 ### 用户模块
-
-
-
-## 接口介绍
