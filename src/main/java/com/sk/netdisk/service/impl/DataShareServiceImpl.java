@@ -326,14 +326,12 @@ public class DataShareServiceImpl extends ServiceImpl<DataShareMapper, DataShare
     @Override
     public void judgeUpdateDataShare(Integer dataId) {
         Share share = shareMapper.selectOne(new QueryWrapper<Share>().eq("data_id", dataId));
-        System.out.println(share);
         if (Objects.isNull(share)) {
             return;
         }
         Integer dataShareId = share.getShareId();
         shareMapper.deleteByDataId(dataId);
         List<Share> shareList = shareMapper.selectList(new QueryWrapper<Share>().eq("share_id", dataShareId));
-        System.out.println(shareList);
         if (shareList.isEmpty()) {
             this.update(new DataShare(), new UpdateWrapper<DataShare>()
                     .set("access_status", DataEnum.SHARE_IS_DELETE.getIndex())
