@@ -22,7 +22,6 @@ public class GlobalExceptionHandler {
         }
         //这个拦截到的异常不是自定义的异常-->数组越界,数学异常,数据库异常
         log.error(e.getMessage());
-        e.printStackTrace();
         return ResponseResult.error("服务器繁忙,请稍后再试");
     }
 
