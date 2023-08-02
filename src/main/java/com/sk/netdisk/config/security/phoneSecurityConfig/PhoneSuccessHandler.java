@@ -26,14 +26,14 @@ public class PhoneSuccessHandler implements AuthenticationSuccessHandler {
         this.redisUtil=redisUtil;
     }
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest httpServletRequest, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+    public void onAuthenticationSuccess(HttpServletRequest httpServletRequest, HttpServletResponse response, Authentication authentication) {
         SecurityContextHolder.getContext().setAuthentication(authentication);
-        SecurityPhone admin = (SecurityPhone) authentication.getPrincipal();
+        SecurityPhone phone = (SecurityPhone) authentication.getPrincipal();
         // 保存用户信息到redis中
         // 用户根据验证码进行登录-生成token
         HashMap<String,String> hashMap=new HashMap<>();
-        hashMap.put("userId",admin.getUserId().toString());
-        hashMap.put("role",admin.getPermissionValueList().get(0));
+        hashMap.put("userId",phone.getUserId().toString());
+        hashMap.put("role",phone.getPermissionValueList().get(0));
         String token=tokenManager.createToken(hashMap);
         String refreshToken = tokenManager.createToken(hashMap);
         // 存储token 和对象数据在redis中-过期值一天
@@ -42,7 +42,7 @@ public class PhoneSuccessHandler implements AuthenticationSuccessHandler {
         HashMap<String, String> result = new HashMap<>();
         result.put("token", token);
         result.put("refresh_token",refreshToken);
-        log.info(admin.getUsername() + ":管理员手机登录成功   时间：" + LocalDateTime.now());
+        log.info(phone.getUsername() + ":管理员手机登录成功   时间：" + LocalDateTime.now());
         ResponseResult.out(response,ResponseResult.success(result));
     }
 }

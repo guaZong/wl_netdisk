@@ -2,13 +2,13 @@ package com.sk.netdisk.config.security.phoneSecurityConfig;
 
 import cn.hutool.core.util.RandomUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.sk.netdisk.constant.RedisConstants;
+import com.sk.netdisk.enums.AppExceptionCodeMsg;
+import com.sk.netdisk.exception.AppException;
 import com.sk.netdisk.mapper.DataMapper;
 import com.sk.netdisk.mapper.UserMapper;
 import com.sk.netdisk.pojo.Data;
 import com.sk.netdisk.pojo.User;
 import com.sk.netdisk.pojo.security.SecurityPhone;
-import com.sk.netdisk.util.CommonUtils;
 import com.sk.netdisk.util.Redis.RedisUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,9 +17,9 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Objects;
 
 @Service("PhoneDetailServiceImpl")
 public class PhoneDetailServiceImpl implements UserDetailsService {
@@ -38,11 +38,11 @@ public class PhoneDetailServiceImpl implements UserDetailsService {
         queryWrapper.eq("username",username);
         User user= userMapper.selectOne(queryWrapper);
         //判断用户是否存在
-        if(user==null){
+        if(Objects.isNull(user)){
             //不存在的话 创建新的用户
             user=createUserByPhoneCode(username);
-            if(user==null){
-                throw new UsernameNotFoundException("系统异常！");
+            if(Objects.isNull(user)){
+                throw new AppException(AppExceptionCodeMsg.SERVER_EXCEPTION);
             }
         }
         ArrayList<String> arrayList=new ArrayList<>();
@@ -52,7 +52,7 @@ public class PhoneDetailServiceImpl implements UserDetailsService {
 
     /**
      * 创建新用户
-     * @param phoneNumber
+     * @param phoneNumber 用户电话号码
      * @return 返回新用户的对象
      */
     public User createUserByPhoneCode(String phoneNumber){

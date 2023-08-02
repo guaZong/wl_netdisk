@@ -20,31 +20,32 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.io.InputStream;
-
+/**
+ * @author lsj
+ * @description 验证用户提供的凭据(账号密码或者验证码)是否有效
+ */
 @Component
 public class PhoneCodeAuthenticationProvider implements AuthenticationProvider {
-    public static final String FORM_PHONE_KEY = "username";
-    public static final String FORM_PHONE_CODE_KEY = "code";
 
     private UserDetailsService userDetailsService;
-    //需要先注入
-    private RedisUtil redisUtil;
+
+    private final RedisUtil redisUtil;
 
     @Override
     public Authentication authenticate(Authentication authentication) throws AuthenticationException {
+        //自定义的方法,进行校验手机验证码是否正确
         authenticationChecks(authentication);
         String mobile = authentication.getName();
+        //验证码验证成功之后进行手机号认证,成功之后获取用户权限列表和用户id
         UserDetails userDetails = userDetailsService.loadUserByUsername(mobile);
-        PhoneAuthenticationToken authResult = new PhoneAuthenticationToken(userDetails, userDetails.getAuthorities());
-        return authResult;
+        return new PhoneAuthenticationToken(userDetails, userDetails.getAuthorities());
     }
-
     public PhoneCodeAuthenticationProvider(RedisUtil redisUtil) {
         this.redisUtil=redisUtil;
     }
     /**
-     * 认证信息校验
-     * @param authentication
+     * 自定义认证信息校验
+     * @param authentication authentication
      */
     private void authenticationChecks(Authentication authentication) {
         Object username = authentication.getPrincipal();
@@ -58,7 +59,6 @@ public class PhoneCodeAuthenticationProvider implements AuthenticationProvider {
         if (!code.equals(redisPhoneCode)) {
             throw new BadCredentialsException("验证码不一致");
         }
-
     }
 
     @Override

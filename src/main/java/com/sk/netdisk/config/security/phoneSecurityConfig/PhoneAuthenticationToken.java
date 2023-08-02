@@ -6,40 +6,45 @@ import org.springframework.security.core.GrantedAuthority;
 import java.util.Collection;
 
 /**
- * @author LSJ
+ * @author lsj
+ * @description 封装用于手机验证码登录的PhoneAuthenticationToken,相当于UsernamePasswordAuthentication
  */
 public class PhoneAuthenticationToken extends AbstractAuthenticationToken {
 
     private final Object principal;
 
-    private Object credentials;
+    private final Object credentials;
 
     /**
-     * 未认证
-     * @param principal
-     * @param credentials
+     * 账号未认证
+     * @param principal 账号
+     * @param credentials 密码
      */
     public PhoneAuthenticationToken(Object principal, Object credentials) {
+        //无权限列表
         super(null);
         this.principal = principal;
         this.credentials = credentials;
+        //设置账号还没有进行验证码验证,接下来需要验证
         setAuthenticated(false);
     }
-    /**
-     * 已经认证成功
-     */
 
-    public PhoneAuthenticationToken(Object principal, Object credentials,
-                                    Collection<? extends GrantedAuthority> authorities) {
+    /**
+     * 账号已经认证成功
+     * @param principal 账号
+     * @param authorities 权限列表
+     */
+    public PhoneAuthenticationToken(Object principal, Collection<? extends GrantedAuthority> authorities) {
+        //有权限列表
         super(authorities);
         this.principal = principal;
-        this.credentials = credentials;
+        this.credentials = null;
         super.setAuthenticated(true);
     }
 
     /**
      * 获取验证码
-     * @return
+     * @return Object 返回验证码
      */
     @Override
     public Object getCredentials() {
@@ -48,7 +53,7 @@ public class PhoneAuthenticationToken extends AbstractAuthenticationToken {
 
     /**
      * 获取手机号
-     * @return
+     * @return Object 手机号
      */
     @Override
     public Object getPrincipal() {
