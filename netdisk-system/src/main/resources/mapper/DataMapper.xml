@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.netdisk.system.mapper.DataMapper">
+
+    <resultMap id="BaseResultMap" type="com.netdisk.system.pojo.Data">
+        <id property="id" column="id" jdbcType="INTEGER"/>
+        <result property="name" column="name" jdbcType="VARCHAR"/>
+        <result property="type" column="type" jdbcType="TINYINT"/>
+        <result property="parentDataId" column="parent_data_id" jdbcType="INTEGER"/>
+        <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+        <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+        <result property="createBy" column="create_by" jdbcType="INTEGER"/>
+        <result property="updateBy" column="update_by" jdbcType="INTEGER"/>
+        <result property="isDelete" column="is_delete" jdbcType="TINYINT"/>
+        <result property="fileId" column="file_id" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id
+        ,name,
+        type,parent_data_id,create_time,
+        update_time,create_by,update_by,
+        is_delete,file_id
+    </sql>
+
+    <update id="deleteData">
+        update `data`
+        set is_delete=1
+        where parent_data_id = #{parentDataId}
+    </update>
+
+    <delete id="finalDelData">
+        delete
+        from `data`
+        where id = #{dataId}
+          and is_delete = 1
+    </delete>
+
+    <select id="findDelData" resultType="com.netdisk.system.pojo.Data">
+        select *
+        from `data`
+        where is_delete = 1
+          and parent_data_id = #{dataId}
+    </select>
+
+    <select id="findById" resultType="com.netdisk.system.pojo.Data">
+        select *
+        from `data`
+        where id = #{dataId}
+    </select>
+
+
+    <select id="findByCreateByAndId" resultType="com.netdisk.system.pojo.Data">
+        select *
+        from `data`
+        where id = #{dataId}
+          and create_by = #{userId}
+    </select>
+
+    <select id="findAllByCreateByAndParentId" resultType="com.netdisk.system.pojo.Data">
+        select *
+        from `data`
+        where parent_data_id = #{parentDataId}
+          and create_by = #{userId}
+    </select>
+
+    <select id="findListByCreateByAndParentIdInnerFileId" resultType="com.netdisk.system.dto.DataDetInfoDto">
+        select d.id,
+               d.name,
+               d.type,
+               d.parent_data_id,
+               DATE_FORMAT(d.create_time, '%Y年%m月%d日 %H:%i') AS create_time,
+               DATE_FORMAT(d.update_time, '%Y年%m月%d日 %H:%i') AS update_time,
+               d.create_by,
+               f.link,
+               f.size,
+               f.bytes
+        from `data` d
+                 left join `file` f on
+            d.file_id = f.id
+        where is_delete = 0
+          and d.parent_data_id = #{parentDataId}
+          and d.create_by = #{userId}
+    </select>
+
+    <select id="findDeleteListByCreateByAndParentId" resultType="com.netdisk.system.pojo.Data">
+        select *
+        from `data`
+        where parent_data_id = #{parentDataId}
+          and create_by = #{userId}
+          and is_delete = 1
+    </select>
+
+    <update id="restoreDeleteData">
+        update `data`
+        set is_delete=0
+        where id = #{dataId}
+          and create_by = #{userId}
+    </update>
+
+    <update id="batchRestoreData" parameterType="java.util.List">
+        UPDATE `data`
+        SET is_delete=0
+        WHERE parent_data_id = #{parentDataId}
+          and create_by = #{userId}
+    </update>
+
+    <insert id="batchSaveData" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
+        <!-- 批量插入语句 -->
+        INSERT INTO data (name, type,parent_data_id, create_time, update_time, create_by,file_id)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.name}, #{item.type},#{item.parentDataId}, #{item.createTime}, #{item.updateTime},
+            #{item.createBy},#{item.fileId})
+        </foreach>
+    </insert>
+
+    <delete id="finalDeleteData">
+        delete
+        from `data`
+        where id = #{dataId}
+    </delete>
+
+    <delete id="batchFinalDelData">
+        delete
+        from `data`
+        where parent_data_id = #{parentDataId}
+    </delete>
+
+    <select id="findNameByIds" resultType="string">
+        select name
+        from `data`
+        where id IN
+        <foreach item="id" collection="dataIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="findTypeByIds" resultType="Integer">
+        select type
+        from `data`
+        where id IN
+        <foreach item="id" collection="dataIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <select id="findDataByIds" resultType="com.netdisk.system.dto.DataDetInfoDto">
+        select d.id,
+        d.name,
+        d.type,
+        d.parent_data_id,
+        DATE_FORMAT(d.create_time, '%Y年%m月%d日 %H:%i') AS create_time,
+        DATE_FORMAT(d.update_time, '%Y年%m月%d日 %H:%i') AS update_time,
+        d.create_by,
+        f.link,
+        f.size
+        from `data` d
+        left join `file` f on
+        d.file_id = f.id
+        where d.id IN
+        <foreach item="id" collection="dataIds" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+        and d.is_delete=0
+    </select>
+
+    <select id="visitorInfoData" resultType="com.netdisk.system.dto.DataDetInfoDto">
+        select d.id,
+               d.name,
+               d.type,
+               d.parent_data_id,
+               d.create_time,
+               d.update_time,
+               d.create_by,
+               f.link,
+               f.size
+        from `data` d
+                 left join `file` f on
+            d.file_id = f.id
+        where is_delete = 0
+          and d.parent_data_id = #{parentDataId}
+    </select>
+
+
+    <select id="findNameByParentDataId" resultType="string">
+        select name
+        from `data`
+        where is_delete = 0
+          and parent_data_id = #{parentDataId}
+          and create_by = ${userId}
+    </select>
+
+
+    <select id="findIdsByParentDataId" resultType="integer">
+        select id
+        from `data`
+        where is_delete = 0
+          and parent_data_id = #{parentDataId}
+    </select>
+
+    <select id="findDataByType" resultType="com.netdisk.system.dto.DataDetInfoDto">
+        select d.id,
+               d.name,
+               d.type,
+               d.parent_data_id,
+               d.create_time,
+               d.update_time,
+               d.create_by,
+               f.link,
+               f.size
+        from `data` d
+                 left join `file` f on
+            d.file_id = f.id
+        where is_delete = 0
+          and d.type = #{type}
+          and d.create_by = #{userId}
+    </select>
+
+
+    <select id="findFatherDataById" resultType="com.netdisk.system.pojo.Data">
+        select *
+        from `data`
+        where id in (select parent_data_id from `data` where id = #{dataId})
+    </select>
+
+
+</mapper>

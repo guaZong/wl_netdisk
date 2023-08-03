@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.netdisk.system.mapper.ShareMapper">
+
+    <resultMap id="BaseResultMap" type="com.netdisk.system.pojo.Share">
+        <id property="id" column="id" jdbcType="INTEGER"/>
+        <result property="shareId" column="share_id" jdbcType="INTEGER"/>
+        <result property="dataId" column="data_id" jdbcType="INTEGER"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id
+        ,share_id,data_id
+    </sql>
+
+    <insert id="batchSaveShare" parameterType="java.util.List" useGeneratedKeys="true" keyProperty="id">
+        <!-- 批量插入语句 -->
+        INSERT INTO share (share_id,data_id)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.shareId}, #{item.dataId})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByShareId">
+        delete
+        from share
+        where share_id = #{shareId}
+    </delete>
+
+    <select id="selectIdsByShareId" resultType="integer">
+        select data_id
+        from share
+        where share_id = #{shareId}
+    </select>
+
+    <delete id="deleteByDataId">
+        delete
+        from share
+        where data_id = #{dataId}
+    </delete>
+
+
+</mapper>
