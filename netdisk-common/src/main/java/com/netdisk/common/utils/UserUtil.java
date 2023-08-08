@@ -21,6 +21,10 @@ public class UserUtil {
      * @return 登录用户id
      */
     public static Integer getLoginUserId() {
+        return getLoginUser().getUserId();
+    }
+
+    public static SecurityUser getLoginUser() {
         try {
             SecurityContext sc = SecurityContextHolder.getContext();
             Authentication auth = sc.getAuthentication();
@@ -28,7 +32,7 @@ public class UserUtil {
             if(securityUser.getUserId()==null){
                 throw new AppException(AppExceptionCodeMsg.USER_NOT_LOGIN);
             }
-            return securityUser.getUserId();
+            return securityUser;
         }catch (Exception e){
             throw new AppException(AppExceptionCodeMsg.USER_NOT_LOGIN);
         }
