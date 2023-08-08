@@ -7,6 +7,7 @@
         <module>netdisk-common</module>
         <module>netdisk-framework</module>
         <module>netdisk-system</module>
+        <module>netdisk-search</module>
     </modules>
 
     <parent>
@@ -45,6 +46,7 @@
         <aliyun-oss.version>3.15.1</aliyun-oss.version>
         <aliyun-code.version>2.0.22</aliyun-code.version>
         <netty.version>4.1.39.Final</netty.version>
+        <ELK.version>7.6.1</ELK.version>
     </properties>
 
     <dependencyManagement>
@@ -174,6 +176,34 @@
                 <artifactId>spring-boot-starter-data-redis</artifactId>
                 <version>${spring-starter.version}</version>
             </dependency>
+<!--            ElasticSearch客户端依赖-->
+            <dependency>
+                <groupId>org.elasticsearch.client</groupId>
+                <artifactId>elasticsearch-rest-high-level-client</artifactId>
+                <version>${ELK.version}</version>
+            </dependency>
+            <!--      elasticsearch,用于声明high-level-client下es的版本为7.6.1否则为7.12.1-->
+            <dependency>
+                <groupId>org.elasticsearch</groupId>
+                <artifactId>elasticsearch</artifactId>
+                <version>${ELK.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.elasticsearch.client</groupId>
+                <artifactId>transport</artifactId>
+                <version>${ELK.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.elasticsearch.plugin</groupId>
+                <artifactId>transport-netty4-client</artifactId>
+                <version>${ELK.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.elasticsearch.client</groupId>
+                <artifactId>elasticsearch-rest-client</artifactId>
+                <version>${ELK.version}</version>
+            </dependency>
+
         </dependencies>
 
     </dependencyManagement>
