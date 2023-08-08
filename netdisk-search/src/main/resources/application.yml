@@ -1,0 +1,19 @@
+server:
+  port: 1315
+  servlet:
+    context-path: /netDisk
+spring:
+  application:
+    name: netdisk-search
+  data:
+    elasticsearch:
+      client:
+        reactive:
+          endpoints: 192.168.30.131:9200
+      repositories:
+        enabled: true
+  elasticsearch:
+    rest:
+      uris: http://192.168.30.131:9200
+#  profiles:
+#    active: dev #默认为开发环境
