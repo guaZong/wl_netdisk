@@ -15,7 +15,7 @@
   - 数据同步: canal
   
 - 项目配合使用其他工具
-  - 接口工具: Apifox (如有兴趣查看该项目接口(只读)   guaZong 在 Apifox 中邀请你加入团队 未来网盘 https://app.apifox.com/invite?token=lYd_EHT66K6nCTueYdM4D)
+  - 接口工具: Apifox (如有兴趣查看该项目接口(只读)   guaZong 在 Apifox 中邀请你加入团队 未来网盘 https://app.apifox.com/invite?token=yvldA6Kdkwx9yCQdZaoZt)
   - 部署工具: nginx、docker
 
 
