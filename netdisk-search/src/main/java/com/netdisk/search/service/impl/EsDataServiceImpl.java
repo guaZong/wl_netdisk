@@ -1,8 +1,12 @@
 package com.netdisk.search.service.impl;
 
+import com.netdisk.common.utils.UserUtil;
 import com.netdisk.search.pojo.EsData;
 import com.netdisk.search.repository.EsDataRepository;
 import com.netdisk.search.service.EsDataService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 /**
@@ -19,8 +23,11 @@ public class EsDataServiceImpl implements EsDataService {
         this.esDataRepository=esDataRepository;
     }
 
+
     @Override
-    public EsData save(EsData esData) {
-        return esDataRepository.save(esData);
+    public Page<EsData> findByName(String name, Integer pageNum, Integer pageSize) {
+        Integer userId= UserUtil.getLoginUserId();
+        Pageable pageable= PageRequest.of(pageNum,pageSize);
+        return esDataRepository.findByNameAndCreateByAndIsDelete(name,userId,0,pageable);
     }
 }

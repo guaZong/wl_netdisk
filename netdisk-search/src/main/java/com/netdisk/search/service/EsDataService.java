@@ -1,6 +1,9 @@
 package com.netdisk.search.service;
 
 import com.netdisk.search.pojo.EsData;
+import com.netdisk.search.repository.EsDataRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 /**
  * @author lsj
@@ -9,10 +12,13 @@ import com.netdisk.search.pojo.EsData;
  */
 
 public interface EsDataService {
+
     /**
-     * 将数据存入es中
-     * @param esData 数据体
-     * @return EsData
+     * 通过名字查询文件
+     * @param name 文件名字
+     * @param pageNum 当前页数
+     * @param pageSize 每页大小
+     * @return Page<EsData>
      */
-    EsData save(EsData esData);
+    Page<EsData> findByName(String name, Integer pageNum,Integer pageSize);
 }
